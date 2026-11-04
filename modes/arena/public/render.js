@@ -143,6 +143,56 @@
       g.strokeRect(9, 9, map.w - 18, map.h - 18);
     })();
 
+    // carte à tuiles (images Kenney) : on redessine le décor dès que les images sont chargées
+    if (map.theme === 'medieval' && map.ground) {
+      const base = '/modes/arena/assets/medieval/';
+      const names = new Set([...map.ground.flat(), ...map.objects.map(o => o.img), ...(map.decor || []).map(d => d.img)]);
+      const imgs = {};
+      Promise.all([...names].map(n => new Promise(res => {
+        const im = new Image();
+        im.onload = () => { imgs[n] = im; res(); };
+        im.onerror = () => res();
+        im.src = base + n + '.png';
+      }))).then(() => paintTiles(imgs));
+    }
+
+    function paintTiles(imgs) {
+      const g = bg.getContext('2d');
+      const T = map.tile;
+      g.imageSmoothingEnabled = true;
+      for (let r = 0; r < map.rows; r++) {
+        for (let c = 0; c < map.cols; c++) {
+          const im = imgs[map.ground[r][c]];
+          if (im) g.drawImage(im, c * T, r * T, T + 0.5, T + 0.5);
+        }
+      }
+      for (const d of map.decor || []) {
+        const im = imgs[d.img];
+        if (im) g.drawImage(im, d.x - T * 0.35, d.y - T * 0.5, T * 0.7, T * 0.7);
+      }
+      // objets du haut vers le bas, avec une ombre au sol
+      for (const o of [...map.objects].sort((a, b) => a.r - b.r)) {
+        const im = imgs[o.img];
+        if (!im) continue;
+        const x = o.c * T, y = o.r * T;
+        if (!o.img.startsWith('tile_')) {
+          g.fillStyle = 'rgba(0,0,0,0.22)';
+          g.beginPath(); g.ellipse(x + T * 0.52, y + T * 0.9, T * 0.36, T * 0.12, 0, 0, TAU); g.fill();
+        }
+        g.drawImage(im, x, y, T, T);
+      }
+      // léger assombrissement des bords
+      const cx = map.w / 2, cy = map.h / 2;
+      const vg = g.createRadialGradient(cx, cy, map.h * 0.45, cx, cy, map.w * 0.75);
+      vg.addColorStop(0, 'rgba(0,0,0,0)');
+      vg.addColorStop(1, 'rgba(0,0,0,0.35)');
+      g.fillStyle = vg;
+      g.fillRect(0, 0, map.w, map.h);
+      g.strokeStyle = '#5b3a1e';
+      g.lineWidth = 10;
+      g.strokeRect(5, 5, map.w - 10, map.h - 10);
+    }
+
     function rr(g, x, y, w, h, r) {
       g.beginPath();
       g.moveTo(x + r, y);
@@ -700,7 +750,7 @@
       ctx.setTransform(scale, 0, 0, scale, offX + sx * scale, offY + sy * scale);
 
       ctx.drawImage(bg, 0, 0);
-      drawTorches(now);
+      if (map.theme !== 'medieval') drawTorches(now);
       drawRings(now);
 
       const list = [...view.entries()].filter(([, v]) => v.visible).sort((a, b) => a[1].y - b[1].y);

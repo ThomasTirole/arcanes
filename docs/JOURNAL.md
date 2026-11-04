@@ -74,6 +74,12 @@ Les plus récentes en haut.
 - v0.3.3 : version et heure de démarrage du serveur affichées en bas de « Mes quiz ». **Mise à jour par
   « Build » + « Run » validée** (dépôt passé en public, la construction récupère le code sur GitHub).
 
+- v0.4.0 : **carte « village médiéval »** avec le pack Kenney Medieval RTS (CC0) fourni par Tirtho :
+  grille de tuiles (herbe, routes en croix), maisons, fermes, halles, tours, donjons, statue, bosquets,
+  rochers ; collisions calculées depuis la zone visible de chaque image (`modes/arena/maps.js`). Carte
+  agrandie (2016 × 1248, tuiles de 96). Seules les images utilisées sont copiées dans le projet.
+- Décision FPS : **les deux modes (PvP et coop)** dans un seul jeu, choisis par un réglage au lancement.
+
 **Reste ouvert**
 - La version qui tournait avant ne connaît pas `.restart` : la première fois, relancer l'application à la
   main depuis le Manager. Ensuite, vérifier sur quelques déploiements que la relance auto est fiable.

@@ -13,18 +13,20 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 - [ ] **[idée]** Retenter un vrai déploiement automatique plus tard (API Infomaniak, ou demander au support pourquoi le SSH depuis GitHub est refusé)
 - [ ] Tester l'Arène en vraie classe (réseau de l'école, 20+ élèves) et régler l'équilibrage
       (dégâts, munitions, rythme des vagues)
-- [ ] **Cartes vraiment belles, thème médiéval**, dessinées avec des tiles / assets (ex. packs Kenney ou
-      autres en licence libre : Tirtho télécharge le pack, on l'intègre) — remplace le décor dessiné en code
+- [x] **[fait]** Carte « village médiéval » avec le pack Kenney Medieval RTS (session 4) — à enrichir (plus de variété, autres cartes)
 - [ ] **Sons** : lancer de sort, impact, stun, bonne / mauvaise réponse (avec bouton couper le son)
 
 ## Nouveaux jeux
 
 - [ ] **[idée]** **FPS rapide** façon Quake / Doom / Ultrakill, très basique et fluide dans le navigateur
-      (Three.js, 3D low-poly). À trancher :
-  - PvP (deathmatch) ou coopératif contre des vagues de monstres ?
+      (Three.js, 3D low-poly). **Décision : les deux modes, PvP et coop**, sur un moteur commun :
+  - un seul jeu « FPS » avec un réglage « Mode : chacun pour soi / coopératif » au lancement
+  - PvP (deathmatch) : questions → munitions / armes, étourdi → question pour revenir
+  - coop : toute la classe contre des vagues de monstres, bonnes réponses → bonus pour l'équipe
+  - orbes de questions sur la carte (armes, vitesse) dans les deux modes
   - visée souris + mode clavier seul (les flèches tournent la caméra) pour les élèves sans souris
-  - questions → munitions / armes, mort → question pour revenir, orbes de questions sur la carte
-  - commencer par un prototype solo pour régler la sensation de jeu et tester les PC de l'école
+  - étapes : prototype solo (déplacements, tir, sensation de jeu, perf sur les PC de l'école) →
+    multijoueur PvP → vagues de monstres pour la coop
   - style cartoon sans gore (robots, slime, étourdissement)
 - [ ] **[idée]** Tir à la corde par équipes (classe contre classe ou deux moitiés de classe)
 - [ ] **[idée]** Course : chaque bonne réponse fait avancer
@@ -37,7 +39,8 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 - [ ] **Carte plus grande, ou qui s'agrandit selon le nombre de joueurs** (évite l'entassement à 25)
 - [ ] **Spectateur qui suit un joueur** : le prof clique sur un élève dans le classement en direct et la
       caméra le suit (retour à la vue d'ensemble d'un clic)
-- [ ] Cartes multiples (forêt, glace, lave, château médiéval…) + choix de la carte par le prof
+- [ ] Cartes multiples (forêt, hiver avec les tuiles de neige du pack, château…) + choix de la carte par le prof
+- [ ] **[idée]** Personnages : utiliser les petits soldats du pack Kenney (4 couleurs) à la place des mages ?
 - [x] **[fait]** Plus aucun emoji dans l'appli : icônes SVG maison (session 4)
 - [ ] **[idée]** Cartes créées par les élèves (comme WayArena) avec leur nom en filigrane
 - [ ] Plus de sorts débloqués selon les réglages (bouclier, téléportation, soin…)

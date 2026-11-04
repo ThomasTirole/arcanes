@@ -52,7 +52,8 @@ Le temps réel passe par Socket.io (WebSocket, avec repli automatique en long-po
 ## Le jeu « Arène »
 
 1. Vague de questions plein écran (QCM ou choix multiples) → chaque réponse remplit les munitions.
-2. Arène : vue du dessus, caméra qui suit le joueur + mini-carte. À 0 PV, le joueur est **étourdi** (stun).
+2. Arène : **village médiéval** vu du dessus (maisons, halles, tours, bosquets, rochers pour se cacher),
+   caméra qui suit le joueur + mini-carte. À 0 PV, le joueur est **étourdi** (stun).
 3. Étourdi → 1 question pour revenir. Plus de munitions → 2 questions pour recharger. `R` = recharger volontairement.
 4. Toutes les 45–75 s, nouvelle vague pour tout le monde (compteur « Prochain quiz »).
 5. Fin : podium (stuns), précision de la classe, couronne de la meilleure précision, rapport par question, export CSV.
@@ -75,7 +76,11 @@ animés localement à 60 images/s ; le serveur reste seul juge des touches et de
 questions, aménagements (les mauvaises réponses donnent aussi quelques sorts, et un retour dans l'arène est
 garanti après une question ; sans aménagements, il faut une bonne réponse, 3 essais max).
 
-Tous les chiffres (dégâts, vitesses, durées, carte) sont en haut de `modes/arena/server.js`.
+Tous les chiffres (dégâts, vitesses, durées) sont en haut de `modes/arena/server.js` ; la carte est décrite dans
+`modes/arena/maps.js` (grille de tuiles + objets, collisions calculées automatiquement).
+
+Images de la carte : pack **Medieval RTS de Kenney** (www.kenney.nl), licence CC0, dans
+`modes/arena/public/assets/medieval/`.
 
 ## Les questions
 
@@ -119,7 +124,7 @@ lib/session.js        2. LE MOTEUR COMMUN — salle d'attente, joueurs, reconnex
 modes/<id>/           3. LES JEUX — un dossier par jeu, chargé automatiquement
   server.js              règles du jeu (hérite de Session)
   public/client.js       affichage élève + vue spectateur du prof
-modes/arena/          l'Arène : server.js (règles), public/physics.js (collisions partagées serveur/navigateur),
+modes/arena/          l'Arène : server.js (règles), maps.js (cartes), public/physics.js (collisions partagées),
                       public/render.js (dessin, particules), public/client.js (contrôles, prédiction)
 modes/_modele/        modèle commenté pour créer un nouveau jeu (ignoré tant qu'il commence par « _ »)
 
