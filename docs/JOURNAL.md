@@ -58,6 +58,13 @@ Les plus récentes en haut.
   a changé, écriture de `.restart`). Le workflow attend la fin des parties avant (`/api/status`) et vérifie
   la version en ligne après. Réessaie 3 fois à 90 s d'intervalle si la connexion est refusée.
 - Ajout de `/api/status` (version, heure de démarrage, nombre de parties en cours).
+- Mise en ligne de la v0.3.1 par « Build » dans le Manager (les fichiers étaient déjà arrivés) : mages,
+  effets et rapport détaillé validés en vraie partie par Tirtho (« c'est beaucoup mieux ! »).
+- **Plus aucun emoji** (demande de Tirtho) : icônes SVG maison (`public/js/icons.js`) pour les sorts, les
+  modes de jeu, l'horloge, la couronne, l'explication, l'état des élèves ; étoiles du canvas dessinées en
+  tracé ; récompenses des questions affichées avec les icônes des sorts ; docs nettoyées aussi.
+- Roadmap : carte plus grande / adaptée au nombre de joueurs, spectateur qui suit un élève choisi dans la
+  liste, cartes médiévales dessinées avec de vrais tiles/assets.
 
 **Reste ouvert**
 - La version qui tournait avant ne connaît pas `.restart` : la première fois, relancer l'application à la

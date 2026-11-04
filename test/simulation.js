@@ -16,7 +16,7 @@ const server = spawn(process.execPath, [path.join(__dirname, '..', 'server.js')]
 let serverErr = '';
 server.stderr.on('data', d => { serverErr += d; });
 
-const fail = msg => { console.error('❌', msg); server.kill(); process.exit(1); };
+const fail = msg => { console.error('ÉCHEC :', msg); server.kill(); process.exit(1); };
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const emit = (s, ev, data) => new Promise(r => s.emit(ev, data, r));
 
@@ -164,7 +164,7 @@ async function main() {
 
   console.log('Robots :');
   for (const b of bots) console.log(`  ${b.name}: ${b.questions} questions, ${b.correct}/${b.results} justes, ${b.done} retours arène, ${b.scored} stuns`);
-  console.log('Rapport :', report.rows.map(r => `${r.name} ${r.stuns}💥 ${r.accuracy}%`).join(' | '));
+  console.log('Rapport :', report.rows.map(r => `${r.name} ${r.stuns} stuns ${r.accuracy}%`).join(' | '));
   console.log('Précision classe :', report.classAccuracy + '%', '— podium :', report.podium.map(p => p.name).join(', '));
   console.log('Total stuns :', totalStuns, '— états reçus par le prof :', states);
 
@@ -176,7 +176,7 @@ async function main() {
   host.emit('host:close');
   await wait(200);
   if (serverErr.replace(/.*ADMIN_PASSWORD.*\n?/g, '').trim()) fail('erreurs serveur :\n' + serverErr);
-  console.log('✅ Simulation OK');
+  console.log('OK — simulation réussie');
   server.kill();
   process.exit(0);
 }

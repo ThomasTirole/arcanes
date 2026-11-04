@@ -33,11 +33,11 @@ const MAP = {
 
 // perCorrect = munitions par bonne réponse ; perWrongAcc / perWrong = par mauvaise réponse avec / sans aménagements
 const SPELLS = [
-  { key: 'eclair', name: 'Éclair', icon: '⚡', max: 20, perCorrect: 6, perWrongAcc: 3, perWrong: 1,
+  { key: 'eclair', name: 'Éclair', icon: 'bolt', max: 20, perCorrect: 6, perWrongAcc: 3, perWrong: 1,
     kind: 'proj', speed: 720, r: 7, dmg: 20, cd: 280, color: '#facc15' },
-  { key: 'gel', name: 'Gel', icon: '❄️', max: 5, perCorrect: 2, perWrongAcc: 1, perWrong: 0,
+  { key: 'gel', name: 'Gel', icon: 'snowflake', max: 5, perCorrect: 2, perWrongAcc: 1, perWrong: 0,
     kind: 'nova', r: 170, dmg: 10, freeze: 1800, cd: 900, color: '#67e8f9' },
-  { key: 'feu', name: 'Boule de feu', icon: '🔥', max: 5, perCorrect: 1, perWrongAcc: 0, perWrong: 0,
+  { key: 'feu', name: 'Boule de feu', icon: 'flame', max: 5, perCorrect: 1, perWrongAcc: 0, perWrong: 0,
     kind: 'proj', speed: 430, r: 13, dmg: 30, splash: 75, splashDmg: 15, cd: 650, color: '#f97316' },
 ];
 
@@ -56,7 +56,7 @@ class ArenaSession extends Session {
   static id = 'arena';
   static meta = {
     name: 'Arène',
-    icon: '⚔️',
+    icon: 'swords',
     description: 'Les bonnes réponses chargent des sorts. Combat en temps réel, celui qui étourdit le plus gagne.',
   };
   static accommodationsHint = 'les mauvaises réponses donnent aussi quelques sorts';
@@ -111,7 +111,7 @@ class ArenaSession extends Session {
 
   compareRows(a, b) { return b.stuns - a.stuns || b.accuracy - a.accuracy || a.gotStunned - b.gotStunned; }
 
-  stateIcon(p) { return { quiz: '❓', arena: '⚔️', stunned: '💫', away: '⏸' }[p.state] || ''; }
+  stateIcon(p) { return p.state; }
 
   get freq() { return FREQ[this.settings.frequency]; }
 
@@ -154,9 +154,9 @@ class ArenaSession extends Session {
       p.quiz.misses++;
       retry = true;
     }
-    const reward = gained.map((g, i) => (g > 0 ? `+${g} ${SPELLS[i].icon}` : null)).filter(Boolean).join('  ');
+    const reward = gained.map((g, i) => (g > 0 ? `+${g} ${SPELLS[i].name}` : null)).filter(Boolean).join(', ');
     this.sendAmmo(p);
-    return { reward, retry, extra: { ammo: p.ammo.slice() } };
+    return { reward, retry, extra: { ammo: p.ammo.slice(), gained } };
   }
 
   onQuizDone(p) {

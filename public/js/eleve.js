@@ -112,7 +112,7 @@
   socket.on('room:lobby', onLobby);
   function onLobby(lobby) {
     if (modePlayer && modePlayer.setPlayers) modePlayer.setPlayers(lobby.players);
-    $('#lobbyQuiz').textContent = `${lobby.mode.icon} ${lobby.mode.name} · ${lobby.quizTitle}`;
+    $('#lobbyQuiz').replaceChildren(window.UI.modeLabel(lobby.mode), ` · ${lobby.quizTitle}`);
     $('#lobbyPlayers').replaceChildren(...lobby.players.map(p =>
       el('span', { class: 'chip' + (p.connected ? '' : ' off') }, dot(p.color), p.name, p.id === myId ? ' (toi)' : '')));
     renderHelp($('#lobbyHelp'), lobby.mode.help);

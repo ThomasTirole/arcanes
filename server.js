@@ -14,7 +14,7 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'arcanes';
 const DATA_DIR = process.env.ARCANES_DATA_DIR || path.join(__dirname, 'data');
 
 if (!process.env.ADMIN_PASSWORD) {
-  console.warn('⚠️  ADMIN_PASSWORD non défini : mot de passe prof par défaut "arcanes". Change-le en production !');
+  console.warn('[attention] ADMIN_PASSWORD non défini : mot de passe prof par défaut "arcanes". Change-le en production !');
 }
 
 const quizzes = new QuizStore(DATA_DIR);
@@ -202,15 +202,15 @@ function busyRooms() {
 fs.watchFile(RESTART_FILE, { interval: 5000 }, (cur, prev) => {
   if (cur.mtimeMs && cur.mtimeMs !== prev.mtimeMs) {
     restartWanted = true;
-    console.log('🔄 Nouvelle version déployée : redémarrage dès qu\'aucune partie n\'est en cours.');
+    console.log('[mise à jour] Nouvelle version déployée : redémarrage dès qu\'aucune partie n\'est en cours.');
   }
 });
 
 setInterval(() => {
   if (!restartWanted) return;
   const busy = busyRooms();
-  if (busy) { console.log(`🔄 Redémarrage en attente (${busy} partie(s) en cours).`); return; }
-  console.log('🔄 Redémarrage pour appliquer la mise à jour.');
+  if (busy) { console.log(`[mise à jour] Redémarrage en attente (${busy} partie(s) en cours).`); return; }
+  console.log('[mise à jour] Redémarrage pour appliquer la mise à jour.');
   process.exit(3);
 }, 15000);
 

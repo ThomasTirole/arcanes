@@ -140,3 +140,11 @@ table.board tr.me td { background: rgba(167,139,250,.15); }
   .qtext { font-size: 22px; }
   .logo { font-size: 42px; }
 }
+
+/* ---------------- Icônes SVG ---------------- */
+.ico-svg { display: inline-flex; align-items: center; justify-content: center; line-height: 0; flex: none; vertical-align: -0.15em; }
+.modelabel { display: inline-flex; align-items: center; gap: 6px; }
+.reward { display: inline-flex; gap: 14px; margin-left: 14px; vertical-align: middle; }
+.reward-item { display: inline-flex; align-items: center; gap: 3px; }
+.qexplain { display: flex; gap: 10px; align-items: flex-start; }
+.feed div { display: flex; align-items: center; gap: 6px; }

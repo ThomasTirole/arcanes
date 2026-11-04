@@ -454,9 +454,8 @@
       ctx.closePath();
       ctx.fill();
       ctx.fillStyle = '#fde68a';
-      ctx.font = `${Math.round(R * 0.55)}px sans-serif`;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('★', x - face * R * 0.05, by - R * 1.2);
+      starPath(x - face * R * 0.05, by - R * 1.2, R * 0.24);
+      ctx.fill();
 
       if (!behindStaff && !o.stunned) drawStaff();
 
@@ -479,14 +478,23 @@
       }
       // étoiles d'étourdissement
       if (o.stunned) {
-        ctx.font = 'bold 16px sans-serif';
         for (let k = 0; k < 3; k++) {
           const a = phase * 0.7 + (k * TAU) / 3;
           ctx.fillStyle = '#fde047';
-          ctx.fillText('★', x + Math.cos(a) * 20, by - R * 1.6 + Math.sin(a) * 6);
+          starPath(x + Math.cos(a) * 20, by - R * 1.6 + Math.sin(a) * 6, 6);
+          ctx.fill();
         }
       }
       ctx.restore();
+    }
+
+    function starPath(cx, cy, r) {
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const a = -Math.PI / 2 + (i * Math.PI) / 5, rr2 = i % 2 ? r * 0.45 : r;
+        ctx.lineTo(cx + Math.cos(a) * rr2, cy + Math.sin(a) * rr2);
+      }
+      ctx.closePath();
     }
 
     function drawLabel(x, y, name, hp, isMe) {

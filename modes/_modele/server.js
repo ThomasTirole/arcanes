@@ -15,7 +15,7 @@ const { Session } = require('../../lib/session');
 
 class ModeleSession extends Session {
   static id = '_modele';                       // = nom du dossier
-  static meta = { name: 'Modèle', icon: '🧩', description: 'Chaque bonne réponse rapporte des points.' };
+  static meta = { name: 'Modèle', icon: 'puzzle', description: 'Chaque bonne réponse rapporte des points.' };
   static accommodationsHint = 'une mauvaise réponse rapporte 1 point';
   static settings = [                          // réglages en plus de durée / réponse / aménagements
     { key: 'points', label: 'Points par bonne réponse', type: 'select', default: 10,

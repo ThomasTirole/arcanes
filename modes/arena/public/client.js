@@ -9,7 +9,7 @@
 
   function feedLine(el, f) {
     return f.a
-      ? el('div', null, el('b', { style: `color:${f.ac}` }, f.a), ' 💥 ', el('b', { style: `color:${f.vc}` }, f.v))
+      ? el('div', null, el('b', { style: `color:${f.ac}` }, f.a), window.Icons.icon('burst', { size: 14, color: '#fde047' }), el('b', { style: `color:${f.vc}` }, f.v))
       : el('div', null, el('b', { style: `color:${f.vc}` }, f.v), ' est étourdi');
   }
 
@@ -46,7 +46,7 @@
     const feed = el('div', { class: 'feed' });
     root.replaceChildren(
       canvas,
-      el('div', { class: 'hud-top' }, spells, el('div', { class: 'pill arena-score' }, '💥 ', scoreEl, ' stuns')),
+      el('div', { class: 'hud-top' }, spells, el('div', { class: 'pill arena-score' }, ctx.ui.icon('burst', { size: 18, color: '#fde047' }), scoreEl, ' stuns')),
       feed,
       el('div', { class: 'hud-bottom' },
         el('kbd', null, '↑↓←→'), '/', el('kbd', null, 'WASD'), ' bouger  •  ',
@@ -60,7 +60,7 @@
     const boxes = info.spells.map((s, i) => {
       const box = el('div', { class: 'spell', style: `--sc:${s.color}`, title: s.name },
         el('span', { class: 'key' }, String(i + 1)),
-        el('div', { class: 'ico' }, s.icon),
+        el('div', { class: 'ico' }, ctx.ui.icon(s.icon, { size: 28, color: s.color })),
         el('div', { class: 'ammo' }, `0/${s.max}`),
         el('div', { class: 'bar' }, el('i', { style: 'width:0%' })),
         el('div', { class: 'cd' }));
@@ -99,7 +99,7 @@
     socket.on('castfail', m => renderer.onCastFail(m.shot));
     socket.on('fx', e => { if (!(e.t === 'nova' && e.o === myId)) renderer.addFx(e); });
     socket.on('feed', f => pushFeed(feed, feedLine(el, f), 5));
-    socket.on('you:scored', m => { stuns = m.stuns; ctx.banner(`💥 ${m.victim} étourdi !`, '#fde047'); });
+    socket.on('you:scored', m => { stuns = m.stuns; ctx.banner(`${m.victim} étourdi !`, '#fde047'); });
     socket.on('you:stunned', m => ctx.banner(m.by ? `Étourdi par ${m.by} !` : 'Étourdi !', '#f87171'));
 
     // ---- clavier / souris
@@ -206,7 +206,11 @@
       },
       onQuizOpen: releaseAll,
       quizHeader: () => el('div', { style: 'display:flex;gap:8px' }, info.spells.map((s, i) =>
-        el('span', { class: 'pill', title: s.name }, s.icon, ' ', el('b', null, String(myAmmo[i]))))),
+        el('span', { class: 'pill', title: s.name }, ctx.ui.icon(s.icon, { size: 18, color: s.color }), el('b', null, String(myAmmo[i]))))),
+      // « +6 Éclair » affiché avec les icônes des sorts
+      renderReward: res => (res.gained ? el('span', { class: 'reward' }, res.gained.map((g, i) => (g > 0
+        ? el('span', { class: 'reward-item' }, `+${g}`, ctx.ui.icon(info.spells[i].icon, { size: 22, color: info.spells[i].color }))
+        : null))) : ''),
       onQuizResult(res) { if (res.ammo) myAmmo = res.ammo; },
       onQuizDone(res) { if (res.ammo) myAmmo = res.ammo; ctx.banner('Go !', '#fde68a'); },
     };

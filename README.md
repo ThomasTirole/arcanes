@@ -36,7 +36,7 @@ déployé automatiquement** par GitHub Actions (`.github/workflows/deploy.yml`) 
    automatiquement le processus) ;
 4. le workflow vérifie que `/api/status` renvoie la nouvelle version.
 
-⚠️ Évite quand même de pousser pendant un cours.
+Attention : évite quand même de pousser pendant un cours.
 
 Secrets à créer une fois dans GitHub → *Settings → Secrets and variables → Actions* :
 
@@ -60,13 +60,13 @@ Le temps réel passe par Socket.io (WebSocket, avec repli automatique en long-po
 2. Arène : vue du dessus, caméra qui suit le joueur + mini-carte. À 0 PV, le joueur est **étourdi** (stun).
 3. Étourdi → 1 question pour revenir. Plus de munitions → 2 questions pour recharger. `R` = recharger volontairement.
 4. Toutes les 45–75 s, nouvelle vague pour tout le monde (compteur « Prochain quiz »).
-5. Fin : podium (stuns), précision de la classe, 👑 meilleure précision, rapport par question, export CSV.
+5. Fin : podium (stuns), précision de la classe, couronne de la meilleure précision, rapport par question, export CSV.
 
 | Sort | Touche | Effet | Munitions / bonne réponse |
 |---|---|---|---|
-| ⚡ Éclair | 1 | projectile rapide, 20 dégâts | +6 (max 20) |
-| ❄️ Gel | 2 | onde autour de soi, 10 dégâts + gel 1,8 s | +2 (max 5) |
-| 🔥 Boule de feu | 3 | projectile lent, 30 dégâts + explosion | +1 (max 5) |
+| Éclair | 1 | projectile rapide, 20 dégâts | +6 (max 20) |
+| Gel | 2 | onde autour de soi, 10 dégâts + gel 1,8 s | +2 (max 5) |
+| Boule de feu | 3 | projectile lent, 30 dégâts + explosion | +1 (max 5) |
 
 **Contrôles** : flèches ou WASD (position physique des touches : marche en QWERTZ suisse, QWERTY et AZERTY),
 Espace ou clic pour lancer (le clic vise la souris, Espace tire droit devant), 1-2-3 pour changer de sort.
@@ -93,7 +93,7 @@ Tous les chiffres (dégâts, vitesses, durées, carte) sont en haut de `modes/ar
 
 ### Import / export
 
-- **Excel / CSV** : bouton « ⬇ Modèle Excel » dans « Mes quiz ». Colonnes : `Question`, `Réponse 1` à
+- **Excel / CSV** : bouton « Modèle Excel » dans « Mes quiz ». Colonnes : `Question`, `Réponse 1` à
   `Réponse 6`, `Bonnes réponses` (numéros séparés par des virgules, ex. `1,3`), `Explication`.
 - Les fichiers **Wayground / Quizizz** (`Question Text`, `Option 1…`, `Correct Answer`, `Answer explanation`)
   s'importent tels quels ; les questions à réponse libre / sondage sont ignorées et signalées.
@@ -130,6 +130,7 @@ modes/_modele/        modèle commenté pour créer un nouveau jeu (ignoré tant
 
 server.js             HTTP + API + Socket.io (générique)
 public/               pages communes : élève (index.html), prof (prof.html), fenêtre de questions (js/quiz.js),
+                      icônes SVG maison (js/icons.js — pas d'emoji dans l'appli),
                       import/export Excel (js/import.js, vendor/xlsx.full.min.js = SheetJS, licence Apache 2.0)
 test/                 unit.js (correction, import) et simulation.js (partie complète) — npm test
 docs/                 JOURNAL.md (journal de travail), ROADMAP.md (idées et prochaines étapes)

@@ -114,11 +114,11 @@
       }
       const msg = res.timeout ? 'Temps écoulé !' : res.correct ? 'Bonne réponse !' : 'Mauvaise réponse';
       $('#qFoot').replaceChildren(el('div', { class: 'qresult ' + (res.correct ? 'good' : 'bad') },
-        msg, res.reward ? `   ${res.reward}` : ''));
+        msg, mode().renderReward ? mode().renderReward(res) : (res.reward ? `   ${res.reward}` : '')));
       if (res.explanation) {
         canSkip = !!res.canSkip;
         $('#qFoot').append(
-          el('div', { class: 'qexplain' }, el('b', null, '💡 '), res.explanation),
+          el('div', { class: 'qexplain' }, window.Icons.icon('bulb', { size: 20, color: '#c4b5fd' }), el('span', null, res.explanation)),
           canSkip ? el('button', { class: 'btn primary', onclick: skip }, 'Continuer (Entrée)') : '');
       }
       refreshHeader();

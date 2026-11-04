@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Arcanes — Rejoindre</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><path d=%22M13 2L4 14h7l-1 8 9-12h-7z%22 fill=%22%23a78bfa%22/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
@@ -43,8 +43,8 @@
 <section id="game" class="hidden">
   <div id="modeRoot"></div>
   <div class="hud-clock">
-    <div class="pill">⏱ <b id="gameTimer">0:00</b></div>
-    <div class="pill" id="nextQuizPill">❓ Prochain quiz <b id="nextQuiz">0:00</b></div>
+    <div class="pill"><span data-icon="clock"></span><b id="gameTimer">0:00</b></div>
+    <div class="pill" id="nextQuizPill"><span data-icon="help"></span>Prochain quiz <b id="nextQuiz">0:00</b></div>
   </div>
   <div id="bannerHost"></div>
 
@@ -84,6 +84,7 @@
 </section>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="/js/icons.js"></script>
 <script src="/js/common.js"></script>
 <script src="/js/quiz.js"></script>
 <script src="/js/eleve.js"></script>

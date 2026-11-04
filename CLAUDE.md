@@ -8,8 +8,13 @@ classe. Langue du projet, du code commenté et des échanges : **français**, to
 1. **`docs/JOURNAL.md`** — ajouter en haut une entrée « Session N — date · titre » avec trois rubriques :
    *Décisions* (avec la raison), *Réalisé*, *Reste ouvert*.
 2. **`docs/ROADMAP.md`** — y noter **toutes** les idées évoquées (même vagues, dans « Boîte à idées »),
-   cocher ce qui est fait (✅ + numéro de session), tenir « Prochaines étapes » à jour.
+   cocher ce qui est fait (« [x] **[fait]** » + numéro de session), tenir « Prochaines étapes » à jour.
 3. **`README.md`** — le mettre à jour dès qu'une fonctionnalité, un réglage ou la structure change.
+
+## Style
+
+- **Aucun emoji**, ni dans l'appli ni dans la doc : utiliser les icônes SVG de `public/js/icons.js`
+  (`UI.icon('nom')`), ou en ajouter une dans le même style (trait 24×24).
 
 ## Architecture (voir README)
 

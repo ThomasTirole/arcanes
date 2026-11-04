@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Arcanes — Espace prof</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><path d=%22M13 2L4 14h7l-1 8 9-12h-7z%22 fill=%22%23a78bfa%22/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
@@ -95,7 +95,7 @@
   <div class="topline">
     <h1>Mes quiz</h1>
     <div class="row">
-      <button class="btn" id="dlTemplate" title="Modèle Excel à remplir">⬇ Modèle Excel</button>
+      <button class="btn" id="dlTemplate" title="Modèle Excel à remplir"><span data-icon="download"></span>Modèle Excel</button>
       <label class="btn">Importer (Excel, CSV, JSON)<input id="importNew" type="file" accept=".xlsx,.xls,.csv,.json" hidden></label>
       <button class="btn primary" id="newQuiz">+ Nouveau quiz</button>
     </div>
@@ -165,9 +165,9 @@
 <!-- Partie en cours (spectateur) -->
 <section id="live" class="hidden">
   <div class="livebar">
-    <div class="pill">⏱ <b id="liveTimer">0:00</b></div>
+    <div class="pill"><span data-icon="clock"></span><b id="liveTimer">0:00</b></div>
     <button class="btn small" id="addMinute">+1 min</button>
-    <div class="pill" id="liveNextPill">❓ Prochain quiz <b id="liveNext">0:00</b></div>
+    <div class="pill" id="liveNextPill"><span data-icon="help"></span>Prochain quiz <b id="liveNext">0:00</b></div>
     <div class="pill">Code <b id="liveCode"></b></div>
     <div class="grow"></div>
     <button class="btn small danger" id="endGame">Terminer</button>
@@ -201,7 +201,7 @@
       <div class="muted" id="resAccMsg" style="font-size:14px;margin-top:6px"></div>
     </div>
     <div class="stat">
-      <div class="lbl">👑 Meilleure précision</div>
+      <div class="lbl"><span data-icon="crown" style="color:#facc15"></span>Meilleure précision</div>
       <div class="val" id="resBest">—</div>
     </div>
   </div>
@@ -215,6 +215,7 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="/vendor/xlsx.full.min.js"></script>
+<script src="/js/icons.js"></script>
 <script src="/js/common.js"></script>
 <script src="/js/import.js"></script>
 <script src="/js/prof.js"></script>

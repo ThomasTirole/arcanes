@@ -82,7 +82,7 @@
         el('tbody', null, sorted.map((r, i) => el('tr', { class: r.id === opts.meId ? 'me' : '' },
           el('td', null, String(i + 1)),
           cols.map(c => c.key === 'name'
-            ? el('td', null, el('span', { class: 'namecell' }, dot(r.color), r.name, opts.bestId === r.id ? ' 👑' : ''))
+            ? el('td', null, el('span', { class: 'namecell' }, dot(r.color), r.name, opts.bestId === r.id ? window.Icons.icon('crown', { size: 16, color: '#facc15', title: 'Meilleure précision' }) : ''))
             : el('td', { class: 'num' }, c.fmt ? c.fmt(r[c.key], r) : String(r[c.key])))))));
     }
     paint();
@@ -134,5 +134,23 @@
     return def;
   }
 
-  window.UI = { $, el, fmtTime, show, dot, pctColor, mainScore, renderPodium, renderBoard, renderHelp, banner, loadMode };
+  const icon = (name, opts) => window.Icons.icon(name, opts);
+
+  // icône d'un mode de jeu (nom d'icône SVG), suivie de son nom
+  function modeLabel(mode) {
+    return el('span', { class: 'modelabel' }, icon(mode.icon || 'gamepad', { size: 18 }), mode.name);
+  }
+
+  // remplace les <span data-icon="…"> statiques des pages HTML
+  function hydrateIcons(root = document) {
+    root.querySelectorAll('[data-icon]').forEach(sp => {
+      const ic = icon(sp.dataset.icon, { size: Number(sp.dataset.size) || 18 });
+      if (sp.getAttribute('style')) ic.setAttribute('style', sp.getAttribute('style'));
+      sp.replaceWith(ic);
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => hydrateIcons());
+  else hydrateIcons();
+
+  window.UI = { $, el, fmtTime, show, dot, pctColor, mainScore, renderPodium, renderBoard, renderHelp, banner, loadMode, icon, modeLabel };
 })();

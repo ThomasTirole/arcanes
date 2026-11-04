@@ -1,6 +1,7 @@
 (function () {
   'use strict';
-  const { $, el, fmtTime, show, dot, pctColor, renderPodium, renderBoard, loadMode } = window.UI;
+  const UI = window.UI;
+  const { $, el, fmtTime, show, dot, pctColor, renderPodium, renderBoard, loadMode } = UI;
 
   let password = sessionStorage.getItem('arcanes-pw') || '';
   let editing = null;          // { id|null, title, questions }
@@ -278,7 +279,7 @@
     launchMode = m;
     $('#modeList').replaceChildren(...modes.map(x => el('button', {
       class: 'modecard' + (x.id === m.id ? ' selected' : ''), type: 'button', onclick: () => selectMode(x),
-    }, el('span', { class: 'mt' }, `${x.icon} ${x.name}`), el('span', { class: 'md' }, x.description))));
+    }, el('span', { class: 'mt' }, UI.modeLabel(x)), el('span', { class: 'md' }, x.description))));
     renderSettings(m);
   }
 
@@ -366,7 +367,7 @@
     $('#joinUrl').textContent = host;
     $('#bigCode').textContent = lobby.code;
     $('#liveCode').textContent = lobby.code;
-    $('#hlobbyQuiz').textContent = `${lobby.mode.icon} ${lobby.mode.name} · ${lobby.quizTitle} · ${lobby.questionCount} questions · ${lobby.settings.duration} min`;
+    $('#hlobbyQuiz').replaceChildren(UI.modeLabel(lobby.mode), ` · ${lobby.quizTitle} · ${lobby.questionCount} questions · ${lobby.settings.duration} min`);
     $('#playerCount').textContent = lobby.players.length;
     $('#startGame').disabled = lobby.players.length === 0;
     $('#hlobbyPlayers').replaceChildren(...lobby.players.map(p =>
@@ -403,6 +404,9 @@
   socket.on('game:started', () => { clock = null; go('live'); });
   socket.on('clock', c => { clock = { ...c, at: performance.now() }; if (screen === 'hlobby') go('live'); });
 
+  // état de chaque élève dans le classement en direct
+  const STATE_ICON = { quiz: 'help', arena: 'swords', stunned: 'burst', away: 'pause' };
+  const STATE_LABEL = { quiz: 'répond aux questions', arena: 'en jeu', stunned: 'étourdi', away: 'déconnecté' };
   socket.on('host:stats', rows => {
     const key = room && room.columns && room.columns[0] ? room.columns[0].key : 'correct';
     const label = room && room.columns && room.columns[0] ? room.columns[0].label : '';
@@ -411,7 +415,7 @@
       el('span', { class: 'muted', style: 'width:20px' }, String(i + 1)),
       dot(r.color, 12),
       el('span', { class: 'nm' }, r.name),
-      el('span', { class: 'st' }, r.state || ''),
+      el('span', { class: 'st', title: STATE_LABEL[r.state] || '' }, STATE_ICON[r.state] ? UI.icon(STATE_ICON[r.state], { size: 15 }) : ''),
       el('b', null, String(r[key])), el('span', { class: 'muted', style: 'font-size:13px' }, ` ${label.toLowerCase()}`),
       el('span', { class: 'muted', title: 'Bonnes réponses' }, ` ${r.correct}/${r.answered}`))));
   });
@@ -439,7 +443,7 @@
     lastReport = r;
     go('results');
     const cols = (r.mode && r.mode.columns) || [];
-    $('#resQuiz').textContent = `${r.mode ? `${r.mode.icon} ${r.mode.name} · ` : ''}${r.quizTitle}`;
+    $('#resQuiz').replaceChildren(r.mode ? UI.modeLabel(r.mode) : '', r.mode ? ' · ' : '', r.quizTitle);
     renderPodium($('#resPodium'), r.podium, cols);
     $('#resAcc').textContent = `${r.classAccuracy}%`;
     $('#resAccBar').style.width = `${r.classAccuracy}%`;
@@ -469,7 +473,7 @@
     const split = el('div', { class: 'qsplit' },
       q.correct ? el('span', { style: `width:${(q.correct / q.asked) * 100}%;background:#16a34a` }, `✓ ${q.correct} juste${q.correct > 1 ? 's' : ''}`) : '',
       wrong - (q.timeouts || 0) > 0 ? el('span', { style: `width:${((wrong - q.timeouts) / q.asked) * 100}%;background:#dc2626` }, `✗ ${wrong - q.timeouts} faux`) : '',
-      q.timeouts ? el('span', { style: `width:${(q.timeouts / q.asked) * 100}%;background:#57534e` }, `⏱ ${q.timeouts}`) : '');
+      q.timeouts ? el('span', { style: `width:${(q.timeouts / q.asked) * 100}%;background:#57534e` }, `${q.timeouts} sans rép.`) : '');
     return el('details', { class: 'qrep' },
       el('summary', null,
         el('div', null, el('b', null, `Q${q.index + 1}. `), q.text,
@@ -494,7 +498,7 @@
         q.wrong && q.wrong.length ? el('div', null,
           el('div', { class: 'muted', style: 'font-size:13px;margin-bottom:6px' }, 'Se sont trompés'),
           el('div', { class: 'wronglist' }, q.wrong.map(w => el('span', { class: 'chip' }, dot(w.color), w.name, w.count > 1 ? ` ×${w.count}` : '')))) : '',
-        q.explanation ? el('div', { class: 'explain' }, el('b', null, '💡 Explication : '), q.explanation) : ''));
+        q.explanation ? el('div', { class: 'explain' }, window.Icons.icon('bulb', { size: 18, color: '#c4b5fd' }), el('b', null, ' Explication : '), q.explanation) : ''));
   }
 
   $('#replay').addEventListener('click', () => socket.emit('host:replay'));

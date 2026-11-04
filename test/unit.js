@@ -52,4 +52,4 @@ assert.deepStrictEqual(res.questions[1].correct, [1, 3]);
 assert.strictEqual(res.questions[0].explanation, 'Berne est la ville fédérale.');
 assert.strictEqual(res.skipped, 1);
 
-console.log('✅ Tests unitaires OK');
+console.log('OK — tests unitaires réussis');
