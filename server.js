@@ -68,6 +68,11 @@ app.delete('/api/quizzes/:id', auth, (req, res) => {
 
 app.get('/prof', (req, res) => res.sendFile(path.join(__dirname, 'public', 'prof.html')));
 
+// État public minimal : utilisé par le déploiement automatique pour attendre la fin des parties.
+const VERSION = require('./package.json').version;
+const STARTED_AT = new Date().toISOString();
+app.get('/api/status', (req, res) => res.json({ version: VERSION, startedAt: STARTED_AT, busy: busyRooms() }));
+
 // ---------------------------------------------------------------------------
 // Temps réel
 // ---------------------------------------------------------------------------

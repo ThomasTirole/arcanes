@@ -50,9 +50,23 @@ jobs:
       - name: Vérifier le code (syntaxe)
         run: for f in server.js lib/*.js modes/*.js modes/*/server.js; do node --check "$f"; done
 
-      # Une seule connexion SSH authentifiée, réutilisée pour toutes les commandes
-      # (Infomaniak refuse les connexions répétées en rafale : c'était la cause du code 255).
-      - name: Envoyer les fichiers, installer et redémarrer
+      # Infomaniak relance l'application (et coupe les sessions SSH) dès que ses fichiers changent.
+      # Donc : on attend qu'aucune partie ne soit en cours, on dépose l'archive HORS du dossier du site,
+      # on la déballe d'un coup (la coupure SSH qui suit est normale), puis on se reconnecte pour
+      # réinstaller les dépendances si besoin et vérifier que la nouvelle version tourne.
+      - name: Attendre qu'aucune partie ne soit en cours
+        if: steps.check.outputs.ok == 'true'
+        env:
+          SITE: ${{ vars.SITE_URL || 'https://quiz.tirtho.ch' }}
+        run: |
+          for i in $(seq 1 40); do
+            busy=$(curl -fsS --max-time 10 "$SITE/api/status" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("busy",0))' 2>/dev/null || echo "?")
+            if [ "$busy" = "0" ] || [ "$busy" = "?" ]; then echo "Aucune partie en cours ($busy)."; exit 0; fi
+            echo "$busy partie(s) en cours, nouvel essai dans 30 s…"; sleep 30
+          done
+          echo "::warning::Des parties sont toujours en cours après 20 min : déploiement quand même."
+
+      - name: Déposer et installer la nouvelle version
         if: steps.check.outputs.ok == 'true'
         env:
           SSHPASS: ${{ secrets.IK_SSH_PASSWORD }}
@@ -60,17 +74,41 @@ jobs:
           USER_: ${{ secrets.IK_SSH_USER }}
           DEST: ${{ secrets.IK_PATH }}
         run: |
-          set -x
           sudo apt-get install -y -qq sshpass > /dev/null
           tar czf /tmp/arcanes.tgz \
             --exclude=./.git --exclude=./.github --exclude=./node_modules \
             --exclude=./data --exclude=./test --exclude=./docs --exclude=./CLAUDE.md .
-          mkdir -p ~/.ssh
-          OPTS="-o StrictHostKeyChecking=accept-new -o ControlMaster=auto -o ControlPath=$HOME/.ssh/cm-%r@%h:%p -o ControlPersist=180"
-          # connexion maître (la seule qui s'authentifie)
-          sshpass -e ssh $OPTS -fN "$USER_@$HOST" || { echo "Connexion SSH refusée (code $?)"; exit 1; }
-          ssh $OPTS "$USER_@$HOST" "mkdir -p '$DEST'"
-          scp $OPTS /tmp/arcanes.tgz "$USER_@$HOST:$DEST/.deploy.tgz"
-          ssh $OPTS "$USER_@$HOST" "cd '$DEST' && tar xzf .deploy.tgz && rm -f .deploy.tgz && echo 'Fichiers envoyés.'"
-          ssh $OPTS "$USER_@$HOST" "sh '$DEST/scripts/remote-deploy.sh'"
-          ssh $OPTS -O exit "$USER_@$HOST" 2>/dev/null || true
+          OPTS="-o StrictHostKeyChecking=accept-new -o LogLevel=ERROR -o ConnectTimeout=20"
+          # 1) l'archive va dans le dossier personnel (hors du site : pas de redémarrage)
+          sshpass -e scp $OPTS /tmp/arcanes.tgz "$USER_@$HOST:.arcanes-deploy.tgz"
+          # 2) déballage dans le site : Infomaniak redémarre l'application, la connexion peut être coupée
+          set +e
+          sshpass -e ssh $OPTS "$USER_@$HOST" "cd '$DEST' && tar xzf ~/.arcanes-deploy.tgz && rm -f ~/.arcanes-deploy.tgz && echo 'Fichiers en place.'"
+          code=$?
+          set -e
+          if [ $code -ne 0 ] && [ $code -ne 255 ]; then echo "::error::Échec du déballage (code $code)"; exit 1; fi
+          [ $code -eq 255 ] && echo "Connexion coupée par le redémarrage d'Infomaniak (normal)."
+          # 3) reconnexion après le redémarrage, dépendances si package.json a changé
+          for i in 1 2 3 4 5 6; do
+            sleep 15
+            if sshpass -e ssh $OPTS "$USER_@$HOST" "rm -f ~/.arcanes-deploy.tgz; sh '$DEST/scripts/remote-deploy.sh'"; then
+              exit 0
+            fi
+            echo "Serveur pas encore disponible, nouvel essai…"
+          done
+          echo "::warning::Impossible de se reconnecter pour vérifier les dépendances. Si le site ne répond pas : « Build » puis « Run » dans le Manager."
+
+      - name: Vérifier que le site répond
+        if: steps.check.outputs.ok == 'true'
+        env:
+          SITE: ${{ vars.SITE_URL || 'https://quiz.tirtho.ch' }}
+        run: |
+          want=$(node -p "require('./package.json').version")
+          for i in $(seq 1 12); do
+            if out=$(curl -fsS --max-time 10 "$SITE/api/status"); then
+              echo "Réponse : $out"
+              echo "$out" | grep -q "\"version\":\"$want\"" && { echo "✅ Version $want en ligne."; exit 0; }
+            fi
+            sleep 10
+          done
+          echo "::warning::Le site ne renvoie pas encore la version $want. Vérifie les logs dans le Manager (et lance « Run » si l'application est arrêtée)."

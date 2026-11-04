@@ -28,10 +28,14 @@ Puis ouvrir http://localhost:3000/prof. Sur le réseau de l'école, les élèves
 Le site tourne sur l'hébergement Node.js Infomaniak (`quiz.tirtho.ch`). **Chaque push sur `main` est
 déployé automatiquement** par GitHub Actions (`.github/workflows/deploy.yml`) :
 
-1. les fichiers sont envoyés par SSH (le dossier `data/` avec les quiz n'est jamais touché) ;
-2. `npm install --omit=dev` est lancé sur le serveur ;
-3. le fichier `.restart` est mis à jour : le serveur se relance tout seul **dès qu'aucune partie n'est en
-   cours** (jamais au milieu d'une partie).
+1. il **attend qu'aucune partie ne soit en cours** (`/api/status`, jusqu'à 20 min) ;
+2. il envoie les fichiers par SSH (le dossier `data/` avec les quiz n'est jamais touché). Infomaniak
+   relance automatiquement l'application quand ses fichiers changent ;
+3. il réinstalle les dépendances seulement si `package.json` a changé (`scripts/remote-deploy.sh`) ;
+4. il vérifie que le site répond avec la nouvelle version.
+
+⚠️ Une mise à jour redémarre le serveur : le workflow attend la fin des parties, mais évite quand même de
+pousser pendant un cours.
 
 Secrets à créer une fois dans GitHub → *Settings → Secrets and variables → Actions* :
 
@@ -129,7 +133,7 @@ public/               pages communes : élève (index.html), prof (prof.html), f
 test/                 unit.js (correction, import) et simulation.js (partie complète) — npm test
 docs/                 JOURNAL.md (journal de travail), ROADMAP.md (idées et prochaines étapes)
 .github/workflows/    deploy.yml (déploiement automatique sur Infomaniak)
-scripts/              remote-deploy.sh (lancé sur le serveur après l'envoi : npm install + redémarrage)
+scripts/              remote-deploy.sh (lancé sur le serveur après l'envoi : npm install si besoin)
 ```
 
 ## Ajouter un jeu

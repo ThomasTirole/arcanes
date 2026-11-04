@@ -50,10 +50,14 @@ Les plus récentes en haut.
   `scripts/remote-deploy.sh` envoyé avec le code et lancé par une simple commande SSH (cherche aussi npm
   dans les profils du shell, n'échoue pas si npm est absent). Toujours 255 sans aucune sortie : en fait
   Infomaniak **refuse la 4ᵉ connexion SSH en rafale**. Solution : une seule connexion authentifiée
-  (SSH ControlMaster) réutilisée pour toutes les commandes du déploiement.
+  (SSH ControlMaster)… qui échoue aussi, cette fois pile au déballage des fichiers. Diagnostic final :
+  **Infomaniak relance l'application — et coupe les sessions SSH — dès que les fichiers du site changent**.
+  Nouveau déroulé : attendre qu'aucune partie ne soit en cours (`/api/status`), déposer l'archive hors du
+  site, la déballer (coupure SSH tolérée), se reconnecter, `npm install` seulement si `package.json` a
+  changé, vérifier que `/api/status` renvoie la nouvelle version.
 
 **Reste ouvert**
-- Vérifier que le redémarrage automatique est effectif (Infomaniak relance-t-il le processus ?).
+- Confirmer sur plusieurs déploiements que le redémarrage automatique d'Infomaniak est fiable.
 - Tester la fluidité en vraie classe (réseau de l'école, 20+ élèves).
 
 ---
