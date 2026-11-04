@@ -9,7 +9,7 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 
 ## Prochaines étapes
 
-- [ ] Mettre en place la **mise à jour par « Build »** (commande de construction qui récupère le code sur GitHub)
+- [x] **[fait]** Mise à jour par « Build » + « Run » (la construction récupère le code sur GitHub) (session 4)
 - [ ] **[idée]** Retenter un vrai déploiement automatique plus tard (API Infomaniak, ou demander au support pourquoi le SSH depuis GitHub est refusé)
 - [ ] Tester l'Arène en vraie classe (réseau de l'école, 20+ élèves) et régler l'équilibrage
       (dégâts, munitions, rythme des vagues)
