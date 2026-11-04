@@ -89,11 +89,16 @@ Images de la carte : pack **Medieval RTS de Kenney** (www.kenney.nl), licence CC
 pour régler la sensation de jeu et tester les performances sur les PC de l'école (compteur d'images/s
 affiché). Pas encore de questions ni de multijoueur.
 
-- Déplacements à la Quake / Ultrakill : accélération, saut maintenu pour enchaîner, « air strafe »,
-  dash (Maj, 3 charges), piqué au sol (C en l'air) avec onde de choc
+- Déplacements inspirés d'Ultrakill : saut haut + **double saut**, **saut mural** (3 de suite), contrôle
+  complet en l'air (gauche / droite en sautant), **dash** (Maj, 3 charges), **glissade** (C maintenu au sol)
+  et **glissade-saut** qui garde toute la vitesse, **piqué** (C en l'air) avec onde de choc et rebond si on
+  saute juste après
+- **Coup de poing** (clic droit ou F) : repousse les robots et **renvoie leurs tirs** (parade : soin + arrêt
+  sur image) ; étourdir un robot au contact soigne un peu
+- **Compteur de style** D → C → B → A → S (variété et prise de risque : en l'air, tête, poing, parade…)
 - Armes : revolver (tir instantané, tête = dégâts doublés) et lance-roquettes (explosion, rocket jump)
-- Visée souris ou **clavier seul** (flèches pour viser, F pour tirer)
-- Réglages (Échap) : sensibilité, vitesse de visée au clavier, champ de vision, qualité
+- Visée souris ou **clavier seul** (flèches pour viser, Entrée pour tirer)
+- Réglages (Échap) avec valeurs affichées : sensibilité, vitesse de visée au clavier, champ de vision, qualité
 - Three.js embarqué (`proto/fps/vendor`, licence MIT), sons synthétisés, aucun fichier externe
 
 Tous les chiffres de déplacement sont en haut de `proto/fps/game.js` (objet `P`).

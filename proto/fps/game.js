@@ -5,22 +5,31 @@ import * as THREE from './vendor/three.module.min.js';
 
 // ------------------------------------------------------------------ réglages du jeu
 const P = {
-  gravity: 24,
-  jump: 8.2,
-  groundSpeed: 9,       // vitesse max au sol (m/s)
-  groundAccel: 11,
+  gravity: 27,
+  jump: 10.5,           // saut (≈ 2 m de haut)
+  doubleJump: 9,        // second saut en l'air
+  groundSpeed: 10,      // vitesse max au sol (m/s)
+  groundAccel: 12,
   friction: 7,
-  airSpeed: 1.3,        // « air strafe » à la Quake : permet de garder / gagner de la vitesse en sautant
-  airAccel: 80,
-  dashSpeed: 20,
+  airSpeed: 10,         // contrôle en l'air à la Ultrakill : on peut se diriger (gauche / droite) en sautant
+  airAccel: 6,          //   … sans perdre l'élan d'un dash ou d'une glissade
+  dashSpeed: 22,
   dashTime: 0.16,
   dashCharges: 3,
   dashRecharge: 1.1,    // s par charge
-  slamSpeed: 34,
+  slideSpeed: 17,       // glissade (C maintenu au sol), vitesse constante
+  slideEye: 0.8,        // hauteur de la caméra en glissade
+  slamSpeed: 38,        // piqué au sol (C en l'air)
+  slamBounce: 1.7,      // saut juste après un piqué = rebond plus haut
+  wallJumps: 3,         // sauts contre un mur avant de retoucher le sol
+  coyote: 0.1,          // on peut encore sauter 0,1 s après avoir quitté le bord
+  jumpBuffer: 0.12,     // un appui juste avant d'atterrir compte
   radius: 0.4,
   height: 1.8,
   eye: 1.6,
   stepUp: 0.55,
+  punchRange: 2.8,
+  punchRate: 0.45,
 };
 
 const WEAPONS = [
@@ -144,6 +153,8 @@ const player = {
   pos: new THREE.Vector3(0, 2.5, 10), vel: new THREE.Vector3(), yaw: 0, pitch: 0,
   onGround: false, hp: 100, lastHurt: 0, dash: P.dashCharges, dashT: 0, dashDir: new THREE.Vector3(),
   weapon: 0, cooldown: 0, alive: true, bob: 0, kick: 0, slamming: false, fovKick: 0,
+  airJumps: 1, wallJumps: P.wallJumps, lastGround: 0, jumpQueued: -1, slamLanded: -1,
+  sliding: false, slideDir: new THREE.Vector3(), eyeH: P.eye, punchCd: 0,
 };
 const keys = {};
 let locked = false, started = false, mouseDown = false;
@@ -191,8 +202,61 @@ function accelerate(wish, wishSpeed, accel, dt) {
 }
 
 const fwd = new THREE.Vector3(), right = new THREE.Vector3(), wish = new THREE.Vector3();
+// (pas Ctrl : Ctrl+W fermerait l'onglet du navigateur)
+const crouchHeld = () => keys.KeyC;
+
+// normale du mur touché (pour le saut contre un mur), ou null
+function wallNormal() {
+  const p = player.pos;
+  for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    if (aabbHit(p.x + dx * 0.25, p.y + 0.3, p.z + dz * 0.25)) return new THREE.Vector3(-dx, 0, -dz);
+  }
+  return null;
+}
+
+function tryJump(now) {
+  const p = player;
+  const t = now / 1000;
+  const grounded = p.onGround || t - p.lastGround < P.coyote;
+  if (grounded) {
+    const bounce = t - p.slamLanded < 0.3;
+    p.vel.y = P.jump * (bounce ? P.slamBounce : 1);
+    if (p.sliding) {                       // slide-jump : on garde toute la vitesse de la glissade
+      p.sliding = false;
+      const sp = Math.max(P.slideSpeed, Math.hypot(p.vel.x, p.vel.z));
+      p.vel.x = p.slideDir.x * sp; p.vel.z = p.slideDir.z * sp;
+      p.vel.y = P.jump * 0.85;
+      addStyle(0, 'GLISSADE-SAUT');
+    }
+    if (bounce) { addStyle(0, 'REBOND'); burst(p.pos.clone(), 0xc4b5fd, 12, 6); }
+    p.onGround = false; p.lastGround = -1;
+    sfx('jump');
+    return true;
+  }
+  const wn = wallNormal();
+  if (wn && p.wallJumps > 0) {
+    p.wallJumps--;
+    p.vel.x = wn.x * 9 + wish.x * 4; p.vel.z = wn.z * 9 + wish.z * 4;
+    p.vel.y = P.jump * 0.9;
+    p.slamming = false;
+    burst(p.pos.clone().add(new THREE.Vector3(-wn.x * 0.4, 1, -wn.z * 0.4)), 0xe9d5ff, 8, 4);
+    sfx('jump');
+    return true;
+  }
+  if (p.airJumps > 0) {
+    p.airJumps--;
+    p.vel.y = P.doubleJump;
+    p.slamming = false;
+    ring(p.pos.clone(), 1.2, 0x67e8f9);
+    sfx('dash');
+    return true;
+  }
+  return false;
+}
+
 function updatePlayer(dt, now) {
   const p = player;
+  const t = now / 1000;
   // visée au clavier (élèves sans souris)
   const turn = settings.keyTurn * dt;
   if (keys.ArrowLeft) p.yaw += turn;
@@ -209,29 +273,48 @@ function updatePlayer(dt, now) {
   if (keys.KeyA) wish.sub(right);
   if (wish.lengthSq()) wish.normalize();
 
-  // dash
+  // saut : un appui = un saut (mémorisé un court instant avant l'atterrissage)
+  if (p.jumpQueued >= 0 && t - p.jumpQueued <= P.jumpBuffer && p.dashT <= 0) {
+    if (tryJump(now)) p.jumpQueued = -1;
+  }
+
+  // glissade : C / Ctrl maintenu au sol
+  if (p.onGround && crouchHeld() && p.dashT <= 0) {
+    if (!p.sliding) {
+      p.sliding = true;
+      const h = Math.hypot(p.vel.x, p.vel.z);
+      if (wish.lengthSq()) p.slideDir.copy(wish);
+      else if (h > 1) p.slideDir.set(p.vel.x / h, 0, p.vel.z / h);
+      else p.slideDir.copy(fwd);
+      sfx('slide');
+    }
+  } else if (p.sliding && (!crouchHeld() || p.dashT > 0)) p.sliding = false;
+
   p.dash = Math.min(P.dashCharges, p.dash + dt / P.dashRecharge);
   if (p.dashT > 0) {
     p.dashT -= dt;
     p.vel.x = p.dashDir.x * P.dashSpeed;
     p.vel.z = p.dashDir.z * P.dashSpeed;
     p.vel.y = 0;
-    if (p.dashT <= 0) { p.vel.x *= 0.55; p.vel.z *= 0.55; }
+    if (p.dashT <= 0) { p.vel.x *= 0.6; p.vel.z *= 0.6; }
+  } else if (p.sliding && p.onGround) {
+    p.vel.x = p.slideDir.x * P.slideSpeed;
+    p.vel.z = p.slideDir.z * P.slideSpeed;
+    if (Math.random() < dt * 40) {
+      puff(p.pos.clone().addScaledVector(p.slideDir, 0.5).add(new THREE.Vector3(0, 0.05, 0)), 0xfde68a, 0.25);
+    }
   } else if (p.onGround) {
-    if (keys.Space) { p.vel.y = P.jump; p.onGround = false; sfx('jump'); }
-    else {
-      const sp = Math.hypot(p.vel.x, p.vel.z);
-      if (sp > 0) {
-        const drop = Math.max(sp, 2) * P.friction * dt;
-        const k = Math.max(0, sp - drop) / sp;
-        p.vel.x *= k; p.vel.z *= k;
-      }
+    const sp = Math.hypot(p.vel.x, p.vel.z);
+    if (sp > 0) {
+      const drop = Math.max(sp, 2) * P.friction * dt;
+      const k = Math.max(0, sp - drop) / sp;
+      p.vel.x *= k; p.vel.z *= k;
     }
     accelerate(wish, P.groundSpeed, P.groundAccel, dt);
   } else {
     accelerate(wish, P.airSpeed, P.airAccel, dt);
     p.vel.y -= P.gravity * dt;
-    if (p.slamming) p.vel.y = -P.slamSpeed;
+    if (p.slamming) { p.vel.y = -P.slamSpeed; p.vel.x *= 0.9; p.vel.z *= 0.9; }
   }
 
   const wasGround = p.onGround;
@@ -240,7 +323,10 @@ function updatePlayer(dt, now) {
   p.onGround = false;
   if (moveAxis('y', p.vel.y * dt)) {
     if (p.vel.y < 0) {
-      if (p.slamming) { p.slamming = false; shake(0.5); burst(p.pos.clone(), 0xc4b5fd, 26, 9); slamWave(); }
+      if (p.slamming) {
+        p.slamming = false; p.slamLanded = t;
+        shake(0.5); burst(p.pos.clone(), 0xc4b5fd, 26, 9); slamWave();
+      }
       p.onGround = true;
       if (!wasGround && p.vel.y < -12) shake(Math.min(0.35, -p.vel.y / 80));
     }
@@ -249,6 +335,7 @@ function updatePlayer(dt, now) {
     p.onGround = !!aabbHit(p.pos.x, p.pos.y - 0.04, p.pos.z) && p.vel.y <= 0;
     if (p.onGround) p.vel.y = 0;
   }
+  if (p.onGround) { p.lastGround = t; p.airJumps = 1; p.wallJumps = P.wallJumps; }
   if (p.pos.y < -10) { p.pos.set(0, 3, 10); p.vel.set(0, 0, 0); }
 
   // régénération lente
@@ -256,16 +343,19 @@ function updatePlayer(dt, now) {
 
   // caméra
   const speed = Math.hypot(p.vel.x, p.vel.z);
-  if (p.onGround && speed > 1) p.bob += dt * speed * 1.4;
-  const bobY = p.onGround ? Math.sin(p.bob) * 0.04 * Math.min(1, speed / 9) : 0;
+  if (p.onGround && !p.sliding && speed > 1) p.bob += dt * speed * 1.4;
+  const bobY = p.onGround && !p.sliding ? Math.sin(p.bob) * 0.04 * Math.min(1, speed / 10) : 0;
+  p.eyeH += ((p.sliding ? P.slideEye : P.eye) - p.eyeH) * Math.min(1, dt * 14);
   p.kick *= Math.exp(-dt * 14);
-  p.fovKick += ((p.dashT > 0 ? 12 : Math.min(10, Math.max(0, speed - 9) * 0.8)) - p.fovKick) * Math.min(1, dt * 8);
+  const fovTarget = p.dashT > 0 ? 12 : p.sliding ? 8 : Math.min(12, Math.max(0, speed - 10) * 0.8);
+  p.fovKick += (fovTarget - p.fovKick) * Math.min(1, dt * 8);
   camera.fov = settings.fov + p.fovKick;
   camera.updateProjectionMatrix();
-  camera.position.set(p.pos.x, p.pos.y + P.eye + bobY, p.pos.z);
+  camera.position.set(p.pos.x, p.pos.y + p.eyeH + bobY, p.pos.z);
   camera.rotation.set(0, 0, 0);
   camera.rotateY(p.yaw);
   camera.rotateX(p.pitch + p.kick);
+  if (p.sliding) camera.rotateZ(0.04);
   if (shakeAmt > 0.001) {
     camera.position.x += (Math.random() - 0.5) * shakeAmt * 0.3;
     camera.position.y += (Math.random() - 0.5) * shakeAmt * 0.3;
@@ -278,6 +368,7 @@ function doDash() {
   if (p.dash < 1 || p.dashT > 0 || !p.alive) return;
   p.dash -= 1;
   p.dashT = P.dashTime;
+  p.sliding = false;
   if (wish.lengthSq()) p.dashDir.copy(wish); else p.dashDir.copy(fwd);
   p.slamming = false;
   sfx('dash');
@@ -307,6 +398,62 @@ flash.position.set(0, 0.02, -0.6);
 gun.add(flash);
 let gunRecoil = 0, swapAnim = 0;
 
+// bras gauche pour le coup de poing
+const arm = new THREE.Group();
+{
+  const skin = new THREE.MeshLambertMaterial({ color: 0xf5d0b0 });
+  const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.13, 0.4), new THREE.MeshLambertMaterial({ color: 0x6d28d9 }));
+  sleeve.position.z = 0.15; arm.add(sleeve);
+  const fist = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.15, 0.17), skin); fist.position.z = -0.1; arm.add(fist);
+}
+camera.add(arm);
+let punchAnim = 0;
+
+function punch(now) {
+  const p = player;
+  if (!p.alive || p.punchCd > 0) return;
+  p.punchCd = P.punchRate;
+  punchAnim = 1;
+  sfx('punch');
+  const origin = camera.getWorldPosition(new THREE.Vector3());
+  const dir = aimDir();
+  let hitSomething = false;
+  // parade : renvoie les projectiles ennemis proches dans la direction visée
+  for (const sh of enemyShots) {
+    if (sh.player) continue;
+    const to = sh.mesh.position.clone().sub(origin);
+    const d = to.length();
+    if (d < P.punchRange + 0.8 && to.normalize().dot(dir) > 0.5) {
+      sh.player = true;
+      sh.vel.copy(dir).multiplyScalar(38);
+      sh.born = now;
+      sh.mesh.material = new THREE.MeshBasicMaterial({ color: 0xfde047 });
+      sh.mesh.scale.setScalar(1.6);
+      p.hp = Math.min(100, p.hp + 20);
+      banner('PARADE !', '#fde047', 700);
+      addStyle(150, 'PARADE');
+      hitStop(0.08);
+      sfx('parry');
+      hitSomething = true;
+    }
+  }
+  for (const e of enemies) {
+    if (!e.alive) continue;
+    const c = e.mesh.position.clone().add(e.center);
+    const to = c.clone().sub(origin);
+    const d = to.length();
+    if (d < P.punchRange + e.r && to.normalize().dot(dir) > 0.55) {
+      e.kb = (e.kb || new THREE.Vector3()).copy(dir).setY(0).normalize().multiplyScalar(14);
+      damageEnemy(e, 45, c.clone().addScaledVector(dir, -e.r), false, 'poing');
+      hitSomething = true;
+    }
+  }
+  if (hitSomething) { shake(0.15); p.kick -= 0.02; }
+}
+
+let stopUntil = 0;
+function hitStop(sec) { stopUntil = performance.now() + sec * 1000; }
+
 function selectWeapon(i) {
   if (i === player.weapon) return;
   player.weapon = i;
@@ -326,6 +473,11 @@ function updateGun(dt) {
   gun.position.set(0.34 + sway, -0.32 - swapAnim * 0.4 + Math.abs(sway) * 0.5, -0.55 + gunRecoil * 0.18);
   gun.rotation.x = gunRecoil * 0.6;
   flash.intensity *= Math.exp(-dt * 30);
+  player.punchCd = Math.max(0, player.punchCd - dt);
+  punchAnim = Math.max(0, punchAnim - dt * 4);
+  const ext = Math.sin(Math.min(1, (1 - punchAnim) * 1.6) * Math.PI);
+  arm.visible = punchAnim > 0;
+  arm.position.set(-0.28 + ext * 0.12, -0.3 + ext * 0.08, -0.45 - ext * 0.35);
 }
 
 // ------------------------------------------------------------------ tirs
@@ -488,7 +640,7 @@ function startWave() {
   }
 }
 
-function damageEnemy(e, dmg, at, head) {
+function damageEnemy(e, dmg, at, head, how) {
   if (!e.alive) return;
   e.hp -= dmg;
   e.flashT = 0.08;
@@ -497,6 +649,15 @@ function damageEnemy(e, dmg, at, head) {
   if (e.hp <= 0) {
     e.alive = false;
     score++;
+    // style à la Ultrakill : variété et prise de risque rapportent plus
+    const close = e.mesh.position.distanceTo(player.pos) < 6;
+    addStyle(100, 'ÉTOURDI');
+    if (head) addStyle(60, 'TÊTE');
+    if (!player.onGround) addStyle(60, 'EN L\'AIR');
+    if (how === 'poing') addStyle(80, 'POING');
+    if (how === 'parade') addStyle(120, 'RENVOI');
+    if (how === 'piqué') addStyle(80, 'PIQUÉ');
+    if (close) { player.hp = Math.min(100, player.hp + 10); addStyle(30, 'AU CONTACT'); }
     document.getElementById('score').textContent = score;
     const c = e.mesh.position.clone().add(e.center);
     burst(c, e.flying ? 0x60a5fa : 0x9ca3af, 22, 8, true);
@@ -520,6 +681,11 @@ function updateEnemies(dt, now) {
       e.vel.lerp(desired.sub(pos).multiplyScalar(0.8), Math.min(1, dt * 2));
       pos.addScaledVector(e.vel, dt);
       pos.y = Math.max(1.5, Math.min(7, pos.y));
+    } else if (e.kb && e.kb.lengthSq() > 0.5) {
+      const nx = pos.x + e.kb.x * dt, nz = pos.z + e.kb.z * dt;
+      if (!blocked(nx, pos.z)) pos.x = nx;
+      if (!blocked(pos.x, nz)) pos.z = nz;
+      e.kb.multiplyScalar(Math.exp(-dt * 6));
     } else if (dist > 4) {
       const dir = new THREE.Vector3(to.x, 0, to.z).normalize();
       const sp = 3.6 + wave * 0.15;
@@ -567,7 +733,13 @@ function updateEnemyShots(dt, now) {
     const wallD = rayBoxes(s.mesh.position, step.clone().divideScalar(len || 1), len);
     s.mesh.position.add(step);
     let dead = wallD < len || now - s.born > 5000;
-    if (!dead && player.alive && s.mesh.position.distanceTo(body) < 0.9) { hurtPlayer(12, true); dead = true; }
+    if (s.player) {
+      for (const e of enemies) {
+        if (e.alive && s.mesh.position.distanceTo(e.mesh.position.clone().add(e.center)) < e.r + 0.4) {
+          damageEnemy(e, 150, s.mesh.position.clone(), false, 'parade'); dead = true; break;
+        }
+      }
+    } else if (!dead && player.alive && s.mesh.position.distanceTo(body) < 0.9) { hurtPlayer(12, true); dead = true; }
     if (dead) { burst(s.mesh.position.clone(), 0xf472b6, 6, 4); scene.remove(s.mesh); s.mesh.geometry.dispose(); enemyShots.splice(i, 1); }
   }
 }
@@ -578,7 +750,7 @@ function slamWave() {
   for (const e of enemies) {
     if (!e.alive) continue;
     const d = e.mesh.position.distanceTo(player.pos);
-    if (d < 4.5) damageEnemy(e, 45, null, false);
+    if (d < 4.5) damageEnemy(e, 45, null, false, 'piqué');
   }
 }
 
@@ -602,7 +774,8 @@ function restart() {
   enemies.length = 0;
   for (const s of [...enemyShots, ...rockets]) scene.remove(s.mesh);
   enemyShots.length = 0; rockets.length = 0;
-  Object.assign(player, { hp: 100, alive: true, dash: P.dashCharges, slamming: false });
+  Object.assign(player, { hp: 100, alive: true, dash: P.dashCharges, slamming: false, sliding: false, airJumps: 1, wallJumps: P.wallJumps });
+  style = 0; styleFeed.length = 0;
   player.pos.set(0, 2.5, 10); player.vel.set(0, 0, 0); player.yaw = 0; player.pitch = 0;
   wave = 0; score = 0; waveTimer = 0;
   document.getElementById('score').textContent = '0';
@@ -693,6 +866,7 @@ function sfx(kind) {
       shot: ['square', 520, 120, 0.12, 0.12], rocket: ['sawtooth', 160, 60, 0.25, 0.12], boom: ['sawtooth', 90, 30, 0.45, 0.2],
       jump: ['sine', 300, 520, 0.08, 0.05], dash: ['triangle', 700, 300, 0.12, 0.08], kill: ['square', 880, 1320, 0.12, 0.08],
       hit: ['square', 1200, 1200, 0.03, 0.04], down: ['sawtooth', 300, 60, 0.6, 0.15],
+      slide: ['triangle', 220, 120, 0.2, 0.06], punch: ['square', 180, 80, 0.08, 0.1], parry: ['triangle', 1400, 2400, 0.2, 0.12],
     }[kind];
     if (!S) return;
     o.type = S[0];
@@ -723,6 +897,46 @@ function hitMarker(kill) {
   hitTimer = setTimeout(() => { h.style.opacity = 0; }, kill ? 220 : 90);
 }
 
+// compteur de style (inspiré d'Ultrakill)
+const RANKS = [
+  { min: 0, letter: 'D', name: 'Destructeur', color: '#60a5fa' },
+  { min: 250, letter: 'C', name: 'Chaotique', color: '#4ade80' },
+  { min: 550, letter: 'B', name: 'Brutal', color: '#facc15' },
+  { min: 900, letter: 'A', name: 'Anarchique', color: '#fb923c' },
+  { min: 1400, letter: 'S', name: 'Suprême', color: '#f87171' },
+];
+let style = 0;
+const styleFeed = [];
+function addStyle(points, label) {
+  style = Math.min(2000, style + points);
+  styleFeed.unshift({ label, t: performance.now() });
+  styleFeed.length = Math.min(styleFeed.length, 5);
+}
+function updateStyle(dt) {
+  style = Math.max(0, style - (60 + style * 0.08) * dt);
+  const box = document.getElementById('style');
+  if (style < 40) { box.style.opacity = 0; return; }
+  box.style.opacity = 1;
+  let r = RANKS[0];
+  for (const k of RANKS) if (style >= k.min) r = k;
+  const next = RANKS[RANKS.indexOf(r) + 1];
+  const frac = next ? (style - r.min) / (next.min - r.min) : 1;
+  document.getElementById('styleLetter').textContent = r.letter;
+  document.getElementById('styleLetter').style.color = r.color;
+  document.getElementById('styleName').textContent = r.name;
+  document.getElementById('styleBar').style.width = `${frac * 100}%`;
+  document.getElementById('styleBar').style.background = r.color;
+  const now = performance.now();
+  document.getElementById('styleFeed').innerHTML = '';
+  for (const f of styleFeed) {
+    if (now - f.t > 2500) continue;
+    const d = document.createElement('div');
+    d.textContent = '+ ' + f.label;
+    d.style.opacity = String(1 - (now - f.t) / 2500);
+    document.getElementById('styleFeed').append(d);
+  }
+}
+
 const hpBar = document.getElementById('hpBar'), hpText = document.getElementById('hpText');
 const dashBars = [...document.querySelectorAll('#dash i')];
 const speedEl = document.getElementById('speed'), fpsEl = document.getElementById('fps');
@@ -740,11 +954,15 @@ function updateHud(dt) {
 // ------------------------------------------------------------------ contrôles
 const canvas = renderer.domElement;
 const menu = document.getElementById('menu');
+const FORMAT = { sens: v => v.toFixed(1), keyTurn: v => v.toFixed(1), fov: v => `${v}°` };
 for (const id of ['sens', 'keyTurn', 'fov', 'quality']) {
   const input = document.getElementById(id);
   input.value = settings[id];
+  const out = document.getElementById(id + 'Val');
+  if (out) out.textContent = FORMAT[id](Number(input.value));
   input.addEventListener('input', () => {
     settings[id] = Number(input.value);
+    if (out) out.textContent = FORMAT[id](settings[id]);
     try { localStorage.setItem('arcanes-fps', JSON.stringify(settings)); } catch (e) { /* rien */ }
     applyQuality();
   });
@@ -774,7 +992,7 @@ document.addEventListener('mousemove', e => {
   player.yaw -= e.movementX * k;
   player.pitch = Math.max(-1.5, Math.min(1.5, player.pitch - e.movementY * k));
 });
-document.addEventListener('mousedown', e => { if (locked && e.button === 0) mouseDown = true; if (locked && e.button === 2) selectWeapon(1 - player.weapon); });
+document.addEventListener('mousedown', e => { if (locked && e.button === 0) mouseDown = true; if (locked && e.button === 2) punch(performance.now()); });
 document.addEventListener('mouseup', e => { if (e.button === 0) mouseDown = false; });
 document.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('wheel', () => { if (locked) selectWeapon(1 - player.weapon); });
@@ -785,12 +1003,14 @@ document.addEventListener('keydown', e => {
     return;
   }
   keys[e.code] = true;
-  if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+  if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'].includes(e.code)) e.preventDefault();
+  if (e.code === 'Space' && !e.repeat) player.jumpQueued = performance.now() / 1000;
+  if (e.code === 'KeyF' && !e.repeat) punch(performance.now());
   if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') doDash();
   if (e.code === 'Digit1' || e.code === 'Numpad1') selectWeapon(0);
   if (e.code === 'Digit2' || e.code === 'Numpad2') selectWeapon(1);
   if (e.code === 'KeyQ') selectWeapon(1 - player.weapon);
-  if ((e.code === 'KeyC' || e.code === 'ControlLeft') && !player.onGround && player.alive) player.slamming = true;
+  if (e.code === 'KeyC' && !e.repeat && !player.onGround && player.alive && player.dashT <= 0) player.slamming = true;
   if (e.code === 'KeyR' && !player.alive) restart();
   if (e.code === 'Escape' && !locked && started) { menu.classList.remove('hidden'); document.getElementById('play').textContent = 'Reprendre'; }
 });
@@ -802,11 +1022,14 @@ let last = performance.now();
 function loop(now) {
   const dt = Math.min(0.033, (now - last) / 1000);
   last = now;
-  if (started && !paused()) {
+  if (started && !paused() && now < stopUntil) {
+    // arrêt sur image d'une fraction de seconde (parade)
+  } else if (started && !paused()) {
     player.cooldown = Math.max(0, player.cooldown - dt);
+    updateStyle(dt);
     if (player.alive) {
       updatePlayer(dt, now);
-      if (mouseDown || keys.KeyF) fire(now);
+      if (mouseDown || keys.Enter || keys.NumpadEnter) fire(now);
     }
     updateGun(dt);
     updateRockets(dt, now);

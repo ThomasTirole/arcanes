@@ -87,6 +87,12 @@ Les plus récentes en haut.
   enchaîné, air strafe, dash 3 charges, piqué au sol), revolver (tête ×2) et lance-roquettes (rocket
   jump), robots au sol + drones en vagues, visée clavier possible, réglages, compteur d'images/s.
   Testé dans Chrome sans carte graphique (33 img/s en rendu logiciel, bien plus avec un vrai GPU).
+- Retours de Tirtho sur le prototype FPS (« bien réactif, agréable ») → v0.5.1 : valeurs des réglages
+  affichées, saut plus haut, **double saut**, un appui = un saut (plus besoin de maintenir), **vrai contrôle
+  en l'air** (le contrôle « Quake » empêchait de se décaler en sautant), **glissade** et glissade-saut,
+  **coup de poing** avec **parade** des tirs, et inspiré d'Ultrakill : saut mural, rebond après un piqué,
+  compteur de style, soin en étourdissant au contact, arrêt sur image à la parade. Ctrl n'est pas utilisé
+  (Ctrl+W fermerait l'onglet) : glissade et piqué sur C ; tir au clavier sur Entrée, F = poing.
 - Décision FPS : **les deux modes (PvP et coop)** dans un seul jeu, choisis par un réglage au lancement.
 
 **Reste ouvert**

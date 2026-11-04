@@ -60,6 +60,11 @@
   <div id="hitmark"></div>
   <div id="banner"></div>
   <div id="topLeft" class="panel"><span id="fps">— img/s</span> · Prototype FPS</div>
+  <div id="style" class="panel" style="right:16px;top:150px;text-align:right;min-width:190px;opacity:0;transition:opacity .2s">
+    <div class="row" style="justify-content:flex-end;gap:10px"><span id="styleName" class="lbl">Destructeur</span><span id="styleLetter" class="big" style="font-size:44px;line-height:1">D</span></div>
+    <div class="bar" style="height:6px"><i id="styleBar" style="width:0%"></i></div>
+    <div id="styleFeed" style="font-size:14px;margin-top:6px;line-height:1.4"></div>
+  </div>
   <div id="topRight" class="panel">
     <div class="lbl">Vague</div><div class="big" id="wave">1</div>
     <div class="lbl">Robots étourdis</div><div class="big" id="score">0</div>
@@ -84,20 +89,21 @@
     <h1>Prototype FPS</h1>
     <div class="muted" id="menuText">Arène d'entraînement contre des vagues de robots. But du prototype : régler la sensation de jeu et vérifier que ça tourne bien sur les PC de l'école.</div>
     <div class="keys">
-      <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> se déplacer</span>
+      <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> se déplacer (aussi en l'air)</span>
       <span><kbd>Souris</kbd> viser · <kbd>Clic</kbd> tirer</span>
-      <span><kbd>Espace</kbd> sauter (maintenir = enchaîner)</span>
-      <span><kbd>Flèches</kbd> viser au clavier · <kbd>F</kbd> tirer</span>
+      <span><kbd>Espace</kbd> sauter · 2ᵉ appui en l'air : double saut</span>
+      <span><kbd>Clic droit</kbd> / <kbd>F</kbd> coup de poing (renvoie les tirs)</span>
       <span><kbd>Maj</kbd> dash (3 charges)</span>
-      <span><kbd>1</kbd> <kbd>2</kbd> / molette : changer d'arme</span>
-      <span><kbd>C</kbd> en l'air : piqué au sol</span>
-      <span><kbd>Échap</kbd> pause et réglages</span>
+      <span><kbd>C</kbd> au sol : glissade (maintenir) · en l'air : piqué</span>
+      <span><kbd>Flèches</kbd> viser au clavier · <kbd>Entrée</kbd> tirer</span>
+      <span><kbd>1</kbd> <kbd>2</kbd> <kbd>Q</kbd> molette : changer d'arme</span>
     </div>
-    <div class="muted" style="font-size:14px;margin-bottom:6px">Astuce : un tir de roquette sous ses pieds en sautant = rocket jump.</div>
+    <div class="muted" style="font-size:14px;margin-bottom:6px">Astuces : sauter pendant une glissade garde toute la vitesse · sauter juste après un piqué = rebond plus haut ·
+      Espace contre un mur = saut mural (3 de suite) · roquette sous ses pieds = rocket jump · <kbd>Échap</kbd> pause.</div>
     <div class="settings">
-      <label>Sensibilité souris <input id="sens" type="range" min="0.2" max="3" step="0.1" value="1"></label>
-      <label>Vitesse de visée au clavier <input id="keyTurn" type="range" min="0.5" max="4" step="0.1" value="2.2"></label>
-      <label>Champ de vision <input id="fov" type="range" min="70" max="110" step="1" value="90"></label>
+      <label><span>Sensibilité souris : <b id="sensVal">1.0</b></span><input id="sens" type="range" min="0.2" max="3" step="0.1" value="1"></label>
+      <label><span>Vitesse de visée au clavier : <b id="keyTurnVal">2.2</b></span><input id="keyTurn" type="range" min="0.5" max="4" step="0.1" value="2.2"></label>
+      <label><span>Champ de vision : <b id="fovVal">90°</b></span><input id="fov" type="range" min="70" max="120" step="1" value="90"></label>
       <label>Qualité
         <select id="quality">
           <option value="0.5">Basse (PC lent)</option>
