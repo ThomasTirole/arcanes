@@ -29,13 +29,14 @@ Le site tourne sur l'hébergement Node.js Infomaniak (`quiz.tirtho.ch`). **Chaqu
 déployé automatiquement** par GitHub Actions (`.github/workflows/deploy.yml`) :
 
 1. il **attend qu'aucune partie ne soit en cours** (`/api/status`, jusqu'à 20 min) ;
-2. il envoie les fichiers par SSH (le dossier `data/` avec les quiz n'est jamais touché). Infomaniak
-   relance automatiquement l'application quand ses fichiers changent ;
-3. il réinstalle les dépendances seulement si `package.json` a changé (`scripts/remote-deploy.sh`) ;
-4. il vérifie que le site répond avec la nouvelle version.
+2. en **une seule session SSH** (Infomaniak refuse les sessions rapprochées au-delà de ~3) : envoi de
+   l'archive, déballage dans le site (le dossier `data/` avec les quiz n'est jamais touché), puis
+   `scripts/remote-deploy.sh` qui réinstalle les dépendances si `package.json` a changé et écrit `.restart` ;
+3. le serveur Node voit `.restart` et se relance dès qu'aucune partie n'est en cours (Infomaniak relance
+   automatiquement le processus) ;
+4. le workflow vérifie que `/api/status` renvoie la nouvelle version.
 
-⚠️ Une mise à jour redémarre le serveur : le workflow attend la fin des parties, mais évite quand même de
-pousser pendant un cours.
+⚠️ Évite quand même de pousser pendant un cours.
 
 Secrets à créer une fois dans GitHub → *Settings → Secrets and variables → Actions* :
 
@@ -133,7 +134,7 @@ public/               pages communes : élève (index.html), prof (prof.html), f
 test/                 unit.js (correction, import) et simulation.js (partie complète) — npm test
 docs/                 JOURNAL.md (journal de travail), ROADMAP.md (idées et prochaines étapes)
 .github/workflows/    deploy.yml (déploiement automatique sur Infomaniak)
-scripts/              remote-deploy.sh (lancé sur le serveur après l'envoi : npm install si besoin)
+scripts/              remote-deploy.sh (lancé sur le serveur après l'envoi : npm install si besoin + .restart)
 ```
 
 ## Ajouter un jeu

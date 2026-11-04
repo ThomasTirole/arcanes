@@ -1,15 +1,13 @@
 #!/bin/sh
-# Exécuté sur le serveur Infomaniak par GitHub Actions, APRÈS la mise en place des nouveaux fichiers.
-# Infomaniak relance l'application dès que ses fichiers changent ; ce script ne fait donc que
-# réinstaller les dépendances si package.json a changé depuis le dernier déploiement.
+# Exécuté sur le serveur Infomaniak par GitHub Actions, juste après le déballage des nouveaux fichiers.
+# 1) réinstalle les dépendances si package.json a changé depuis le dernier déploiement ;
+# 2) écrit .restart : le serveur Node se relance dès qu'aucune partie n'est en cours
+#    (Infomaniak relance automatiquement un processus qui s'arrête).
 cd "$(dirname "$0")/.." || exit 1
 echo "Dossier : $(pwd)"
 
 HASH=$(md5sum package.json package-lock.json 2>/dev/null | md5sum | cut -d' ' -f1)
-if [ -d node_modules ] && [ -f .deps-hash ] && [ "$(cat .deps-hash)" = "$HASH" ]; then
-  echo "Dépendances inchangées, rien à installer."
-  exit 0
-fi
+install_deps() {
 
 # npm n'est pas toujours dans le PATH d'une connexion SSH : on essaie les profils habituels
 if ! command -v npm >/dev/null 2>&1; then
@@ -29,3 +27,13 @@ if command -v npm >/dev/null 2>&1; then
 else
   echo "::warning::npm introuvable en SSH. Les dépendances ont changé : lance « Build » puis « Run » dans le Manager Infomaniak."
 fi
+}
+
+if [ -d node_modules ] && [ -f .deps-hash ] && [ "$(cat .deps-hash)" = "$HASH" ]; then
+  echo "Dépendances inchangées, rien à installer."
+else
+  install_deps
+fi
+
+date > .restart
+echo "Déploiement terminé : le serveur redémarre dès qu'aucune partie n'est en cours."

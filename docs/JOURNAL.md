@@ -50,14 +50,18 @@ Les plus récentes en haut.
   `scripts/remote-deploy.sh` envoyé avec le code et lancé par une simple commande SSH (cherche aussi npm
   dans les profils du shell, n'échoue pas si npm est absent). Toujours 255 sans aucune sortie : en fait
   Infomaniak **refuse la 4ᵉ connexion SSH en rafale**. Solution : une seule connexion authentifiée
-  (SSH ControlMaster)… qui échoue aussi, cette fois pile au déballage des fichiers. Diagnostic final :
-  **Infomaniak relance l'application — et coupe les sessions SSH — dès que les fichiers du site changent**.
-  Nouveau déroulé : attendre qu'aucune partie ne soit en cours (`/api/status`), déposer l'archive hors du
-  site, la déballer (coupure SSH tolérée), se reconnecter, `npm install` seulement si `package.json` a
-  changé, vérifier que `/api/status` renvoie la nouvelle version.
+  (SSH ControlMaster)… qui échoue aussi. Une hypothèse « Infomaniak redémarre l'appli quand les fichiers
+  changent » a été écartée : `/api/status` répondait toujours 404, l'ancienne version tournait encore.
+  **Diagnostic retenu : Infomaniak refuse la ~4ᵉ session SSH rapprochée** (y compris les canaux d'une
+  connexion partagée) et bloque quelques minutes. Solution finale : **une seule session SSH** — archive
+  envoyée sur l'entrée standard, déballée, puis `scripts/remote-deploy.sh` (npm install si `package.json`
+  a changé, écriture de `.restart`). Le workflow attend la fin des parties avant (`/api/status`) et vérifie
+  la version en ligne après. Réessaie 3 fois à 90 s d'intervalle si la connexion est refusée.
+- Ajout de `/api/status` (version, heure de démarrage, nombre de parties en cours).
 
 **Reste ouvert**
-- Confirmer sur plusieurs déploiements que le redémarrage automatique d'Infomaniak est fiable.
+- La version qui tournait avant ne connaît pas `.restart` : la première fois, relancer l'application à la
+  main depuis le Manager. Ensuite, vérifier sur quelques déploiements que la relance auto est fiable.
 - Tester la fluidité en vraie classe (réseau de l'école, 20+ élèves).
 
 ---
