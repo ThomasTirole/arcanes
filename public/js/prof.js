@@ -53,6 +53,10 @@
   // ---------------------------------------------------------------- liste
   async function loadDash() {
     go('dash');
+    fetch('/api/status').then(r => r.json()).then(st => {
+      const d = new Date(st.startedAt);
+      $('#appVersion').textContent = `Arcanes v${st.version} · serveur démarré le ${d.toLocaleDateString('fr-CH')} à ${d.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}`;
+    }).catch(() => {});
     $('#dashError').textContent = '';
     try {
       const list = await api('GET', '/api/quizzes');

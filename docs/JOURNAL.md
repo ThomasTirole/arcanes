@@ -71,6 +71,8 @@ Les plus récentes en haut.
   la commande de construction du Manager récupère elle-même le code sur GitHub (`git fetch` + `reset --hard`,
   `data/` intact) ; mettre à jour = « Build » puis « Run ».
 
+- v0.3.3 : version et heure de démarrage du serveur affichées en bas de « Mes quiz » (test de la mise à jour par Build).
+
 **Reste ouvert**
 - La version qui tournait avant ne connaît pas `.restart` : la première fois, relancer l'application à la
   main depuis le Manager. Ensuite, vérifier sur quelques déploiements que la relance auto est fiable.
