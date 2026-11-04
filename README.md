@@ -52,8 +52,8 @@ Le temps réel passe par Socket.io (WebSocket, avec repli automatique en long-po
 ## Le jeu « Arène »
 
 1. Vague de questions plein écran (QCM ou choix multiples) → chaque réponse remplit les munitions.
-2. Arène : **cour du château** vue du dessus (murailles, forteresse centrale, tours, maisons — disposition du
-   premier prototype ; une carte « village médiéval » est aussi prête dans `maps.js`),
+2. Arène : vue du dessus (carte d'origine : dalles et blocs de pierre ; des cartes médiévales Kenney sont
+   prêtes dans `maps.js` mais mises de côté),
    caméra qui suit le joueur + mini-carte. À 0 PV, le joueur est **étourdi** (stun).
 3. Étourdi → 1 question pour revenir. Plus de munitions → 2 questions pour recharger. `R` = recharger volontairement.
 4. Toutes les 45–75 s, nouvelle vague pour tout le monde (compteur « Prochain quiz »).
@@ -77,11 +77,26 @@ animés localement à 60 images/s ; le serveur reste seul juge des touches et de
 questions, aménagements (les mauvaises réponses donnent aussi quelques sorts, et un retour dans l'arène est
 garanti après une question ; sans aménagements, il faut une bonne réponse, 3 essais max).
 
-Tous les chiffres (dégâts, vitesses, durées) sont en haut de `modes/arena/server.js` ; la carte est décrite dans
-`modes/arena/maps.js` (grille de tuiles + objets, collisions calculées automatiquement).
+Tous les chiffres (dégâts, vitesses, durées) et la carte sont en haut de `modes/arena/server.js`.
+`modes/arena/maps.js` contient des cartes à tuiles (pas encore utilisées).
 
 Images de la carte : pack **Medieval RTS de Kenney** (www.kenney.nl), licence CC0, dans
 `modes/arena/public/assets/medieval/`.
+
+## Prototype FPS (solo)
+
+`/proto/fps/` (ex. https://quiz.tirtho.ch/proto/fps/) : arène 3D d'entraînement contre des vagues de robots,
+pour régler la sensation de jeu et tester les performances sur les PC de l'école (compteur d'images/s
+affiché). Pas encore de questions ni de multijoueur.
+
+- Déplacements à la Quake / Ultrakill : accélération, saut maintenu pour enchaîner, « air strafe »,
+  dash (Maj, 3 charges), piqué au sol (C en l'air) avec onde de choc
+- Armes : revolver (tir instantané, tête = dégâts doublés) et lance-roquettes (explosion, rocket jump)
+- Visée souris ou **clavier seul** (flèches pour viser, F pour tirer)
+- Réglages (Échap) : sensibilité, vitesse de visée au clavier, champ de vision, qualité
+- Three.js embarqué (`proto/fps/vendor`, licence MIT), sons synthétisés, aucun fichier externe
+
+Tous les chiffres de déplacement sont en haut de `proto/fps/game.js` (objet `P`).
 
 ## Les questions
 
@@ -134,6 +149,7 @@ public/               pages communes : élève (index.html), prof (prof.html), f
                       icônes SVG maison (js/icons.js — pas d'emoji dans l'appli),
                       import/export Excel (js/import.js, vendor/xlsx.full.min.js = SheetJS, licence Apache 2.0)
 test/                 unit.js (correction, import) et simulation.js (partie complète) — npm test
+proto/fps/            prototype FPS solo (index.html, game.js, vendor/three.module.min.js)
 docs/                 JOURNAL.md (journal de travail), ROADMAP.md (idées et prochaines étapes)
 .github/workflows/    deploy.yml (déploiement automatique sur Infomaniak)
 scripts/              remote-deploy.sh (lancé sur le serveur après l'envoi : npm install si besoin + .restart)

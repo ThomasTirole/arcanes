@@ -13,7 +13,8 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 - [ ] **[idée]** Retenter un vrai déploiement automatique plus tard (API Infomaniak, ou demander au support pourquoi le SSH depuis GitHub est refusé)
 - [ ] Tester l'Arène en vraie classe (réseau de l'école, 20+ élèves) et régler l'équilibrage
       (dégâts, munitions, rythme des vagues)
-- [x] **[fait]** Cartes avec le pack Kenney Medieval RTS : « Cour du château » (murailles) et « Village médiéval » (session 4)
+- [ ] **Cartes médiévales à retravailler** : premiers essais avec le pack Kenney (« Cour du château », « Village ») dans `maps.js`,
+      refusés pour l'instant — il faut garder une **délimitation claire de l'arène** comme sur la carte d'origine
 - [ ] **Sons** : lancer de sort, impact, stun, bonne / mauvaise réponse (avec bouton couper le son)
 
 ## Nouveaux jeux
@@ -25,7 +26,8 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
   - coop : toute la classe contre des vagues de monstres, bonnes réponses → bonus pour l'équipe
   - orbes de questions sur la carte (armes, vitesse) dans les deux modes
   - visée souris + mode clavier seul (les flèches tournent la caméra) pour les élèves sans souris
-  - étapes : prototype solo (déplacements, tir, sensation de jeu, perf sur les PC de l'école) →
+  - [x] **[fait]** prototype solo `/proto/fps/` (session 4) — à tester sur les PC de l'école
+  - étapes suivantes :
     multijoueur PvP → vagues de monstres pour la coop
   - style cartoon sans gore (robots, slime, étourdissement)
 - [ ] **[idée]** Tir à la corde par équipes (classe contre classe ou deux moitiés de classe)

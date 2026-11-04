@@ -81,6 +81,12 @@ Les plus récentes en haut.
 - v0.4.1 : à la demande de Tirtho, carte par défaut = **« Cour du château »** : disposition du tout premier
   prototype (4 murs, bloc central, 2 piliers, 2 petits blocs) habillée uniquement avec le pack Kenney
   (murailles, forteresse avec porte, tours, maisons, route). Le village reste disponible comme 2ᵉ carte.
+- Tirtho n'aime pas les cartes médiévales (plus de délimitation claire de l'arène comme avant) :
+  **retour à la carte d'origine** (v0.5.0). Les cartes Kenney restent dans `maps.js` pour plus tard.
+- **Prototype FPS solo** (`/proto/fps/`) : Three.js embarqué, déplacements façon Quake / Ultrakill (saut
+  enchaîné, air strafe, dash 3 charges, piqué au sol), revolver (tête ×2) et lance-roquettes (rocket
+  jump), robots au sol + drones en vagues, visée clavier possible, réglages, compteur d'images/s.
+  Testé dans Chrome sans carte graphique (33 img/s en rendu logiciel, bien plus avec un vrai GPU).
 - Décision FPS : **les deux modes (PvP et coop)** dans un seul jeu, choisis par un réglage au lancement.
 
 **Reste ouvert**

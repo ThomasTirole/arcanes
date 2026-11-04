@@ -15,9 +15,23 @@ const INVULN_MS = 1500;             // protection à l'apparition
 const PROJ_LIFE_MS = 1600;
 const EMPTY_RELOAD_DELAY = 800;     // plus de munitions → retour au quiz après ce délai
 
-// carte : cour du château (voir maps.js — images du pack Kenney « Medieval RTS »)
-// une 2e carte est prête : require('./maps').medievalVillage()
-const MAP = require('./maps').castleCourtyard();
+// Carte d'origine (dalles, blocs de pierre, bordure). Des cartes médiévales avec le pack Kenney
+// sont prêtes dans maps.js (castleCourtyard, medievalVillage) mais mises de côté pour l'instant.
+const MAP = {
+  w: 1600,
+  h: 1000,
+  obstacles: [
+    { x: 380, y: 220, w: 140, h: 60 },
+    { x: 1080, y: 220, w: 140, h: 60 },
+    { x: 380, y: 720, w: 140, h: 60 },
+    { x: 1080, y: 720, w: 140, h: 60 },
+    { x: 740, y: 440, w: 120, h: 120 },
+    { x: 190, y: 460, w: 60, h: 80 },
+    { x: 1350, y: 460, w: 60, h: 80 },
+    { x: 760, y: 110, w: 80, h: 50 },
+    { x: 760, y: 840, w: 80, h: 50 },
+  ],
+};
 
 // perCorrect = munitions par bonne réponse ; perWrongAcc / perWrong = par mauvaise réponse avec / sans aménagements
 const SPELLS = [

@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arcanes — Prototype FPS</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><path d=%22M13 2L4 14h7l-1 8 9-12h-7z%22 fill=%22%23a78bfa%22/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --accent: #a78bfa; --text: #f3f0ff; --muted: #b3a8d9; --bg: rgba(18,13,36,.82); --line: #3d3170; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0818; color: var(--text); font-family: Fredoka, system-ui, sans-serif; }
+    canvas { display: block; }
+    .hidden { display: none !important; }
+    #hud { position: fixed; inset: 0; pointer-events: none; }
+    #crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); }
+    #crosshair::before, #crosshair::after { content: ''; position: absolute; background: #fff; box-shadow: 0 0 2px #000; }
+    #crosshair::before { left: 10px; top: 2px; width: 2px; height: 18px; }
+    #crosshair::after { top: 10px; left: 2px; height: 2px; width: 18px; }
+    #hitmark { position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; transform: translate(-50%, -50%) rotate(45deg); opacity: 0; transition: opacity .12s; }
+    #hitmark::before, #hitmark::after { content: ''; position: absolute; background: #fde047; }
+    #hitmark::before { left: 16px; top: 0; width: 2px; height: 34px; }
+    #hitmark::after { top: 16px; left: 0; height: 2px; width: 34px; }
+    #hitmark.kill::before, #hitmark.kill::after { background: #f87171; }
+    .panel { position: absolute; background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; }
+    #bottomLeft { left: 16px; bottom: 16px; min-width: 260px; }
+    #bottomRight { right: 16px; bottom: 16px; text-align: right; }
+    #topLeft { left: 16px; top: 16px; font-size: 15px; color: var(--muted); }
+    #topRight { right: 16px; top: 16px; text-align: right; }
+    .bar { height: 14px; background: rgba(255,255,255,.12); border-radius: 7px; overflow: hidden; margin-top: 6px; }
+    .bar i { display: block; height: 100%; background: linear-gradient(90deg, #22c55e, #86efac); transition: width .1s; }
+    .dash { display: flex; gap: 6px; margin-top: 8px; }
+    .dash span { flex: 1; height: 8px; border-radius: 4px; background: rgba(255,255,255,.15); overflow: hidden; }
+    .dash span i { display: block; height: 100%; background: #67e8f9; }
+    .big { font-size: 30px; font-weight: 700; }
+    .lbl { font-size: 13px; color: var(--muted); }
+    #weapons { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
+    #weapons div { padding: 4px 10px; border-radius: 8px; border: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+    #weapons div.on { border-color: #fde68a; color: #fde68a; }
+    #damage { position: fixed; inset: 0; pointer-events: none; box-shadow: inset 0 0 160px rgba(220,38,38,0); transition: box-shadow .25s; }
+    #banner { position: absolute; top: 28%; left: 50%; transform: translateX(-50%); font-size: 46px; font-weight: 700; text-shadow: 0 4px 0 #000; opacity: 0; transition: opacity .3s; white-space: nowrap; }
+    .overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(11,8,24,.78); }
+    .card { background: #241b45; border: 1px solid var(--line); border-radius: 18px; padding: 28px; width: min(720px, 92vw); box-shadow: 0 20px 50px rgba(0,0,0,.4); }
+    h1 { margin: 0 0 4px; font-size: 40px; background: linear-gradient(90deg, #fde68a, #f0abfc, #a78bfa); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .muted { color: var(--muted); }
+    .keys { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; margin: 18px 0; font-size: 16px; }
+    kbd { background: #2e2458; border: 1px solid var(--line); border-bottom-width: 3px; border-radius: 6px; padding: 1px 7px; font-family: inherit; font-size: 13px; }
+    .btn { font: inherit; font-weight: 600; font-size: 20px; color: #fff; border: none; border-radius: 12px; padding: 12px 26px; cursor: pointer; background: linear-gradient(180deg, #8b5cf6, #6d28d9); box-shadow: 0 4px 0 #4c1d95; }
+    .settings { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 24px; margin: 16px 0 20px; }
+    .settings label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); }
+    .settings input[type=range] { accent-color: var(--accent); }
+    .settings select { font: inherit; background: #1c1536; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+<div id="hud">
+  <div id="crosshair"></div>
+  <div id="hitmark"></div>
+  <div id="banner"></div>
+  <div id="topLeft" class="panel"><span id="fps">— img/s</span> · Prototype FPS</div>
+  <div id="topRight" class="panel">
+    <div class="lbl">Vague</div><div class="big" id="wave">1</div>
+    <div class="lbl">Robots étourdis</div><div class="big" id="score">0</div>
+  </div>
+  <div id="bottomLeft" class="panel">
+    <div class="row" style="justify-content:space-between"><span class="lbl">Énergie</span><b id="hpText">100</b></div>
+    <div class="bar"><i id="hpBar" style="width:100%"></i></div>
+    <div class="lbl" style="margin-top:8px">Dash</div>
+    <div class="dash" id="dash"><span><i></i></span><span><i></i></span><span><i></i></span></div>
+  </div>
+  <div id="bottomRight" class="panel">
+    <div class="lbl">Arme</div>
+    <div class="big" id="weaponName">Revolver</div>
+    <div id="weapons"><div data-w="0">1 · Revolver</div><div data-w="1">2 · Lance-roquettes</div></div>
+    <div class="lbl" style="margin-top:6px"><span id="speed">0</span> m/s</div>
+  </div>
+</div>
+<div id="damage"></div>
+
+<div id="menu" class="overlay">
+  <div class="card">
+    <h1>Prototype FPS</h1>
+    <div class="muted" id="menuText">Arène d'entraînement contre des vagues de robots. But du prototype : régler la sensation de jeu et vérifier que ça tourne bien sur les PC de l'école.</div>
+    <div class="keys">
+      <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> se déplacer</span>
+      <span><kbd>Souris</kbd> viser · <kbd>Clic</kbd> tirer</span>
+      <span><kbd>Espace</kbd> sauter (maintenir = enchaîner)</span>
+      <span><kbd>Flèches</kbd> viser au clavier · <kbd>F</kbd> tirer</span>
+      <span><kbd>Maj</kbd> dash (3 charges)</span>
+      <span><kbd>1</kbd> <kbd>2</kbd> / molette : changer d'arme</span>
+      <span><kbd>C</kbd> en l'air : piqué au sol</span>
+      <span><kbd>Échap</kbd> pause et réglages</span>
+    </div>
+    <div class="muted" style="font-size:14px;margin-bottom:6px">Astuce : un tir de roquette sous ses pieds en sautant = rocket jump.</div>
+    <div class="settings">
+      <label>Sensibilité souris <input id="sens" type="range" min="0.2" max="3" step="0.1" value="1"></label>
+      <label>Vitesse de visée au clavier <input id="keyTurn" type="range" min="0.5" max="4" step="0.1" value="2.2"></label>
+      <label>Champ de vision <input id="fov" type="range" min="70" max="110" step="1" value="90"></label>
+      <label>Qualité
+        <select id="quality">
+          <option value="0.5">Basse (PC lent)</option>
+          <option value="0.75" selected>Moyenne</option>
+          <option value="1">Haute</option>
+        </select>
+      </label>
+    </div>
+    <div class="row">
+      <button class="btn" id="play">Jouer</button>
+      <span class="muted" id="menuHint" style="font-size:14px"></span>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="./game.js"></script>
+</body>
+</html>
