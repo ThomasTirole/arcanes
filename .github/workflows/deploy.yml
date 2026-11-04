@@ -50,7 +50,9 @@ jobs:
       - name: Vérifier le code (syntaxe)
         run: for f in server.js lib/*.js modes/*.js modes/*/server.js; do node --check "$f"; done
 
-      - name: Envoyer les fichiers
+      # Une seule connexion SSH authentifiée, réutilisée pour toutes les commandes
+      # (Infomaniak refuse les connexions répétées en rafale : c'était la cause du code 255).
+      - name: Envoyer les fichiers, installer et redémarrer
         if: steps.check.outputs.ok == 'true'
         env:
           SSHPASS: ${{ secrets.IK_SSH_PASSWORD }}
@@ -62,18 +64,12 @@ jobs:
           tar czf /tmp/arcanes.tgz \
             --exclude=./.git --exclude=./.github --exclude=./node_modules \
             --exclude=./data --exclude=./test --exclude=./docs --exclude=./CLAUDE.md .
-          sshpass -e ssh -o StrictHostKeyChecking=accept-new "$USER_@$HOST" "mkdir -p '$DEST'"
-          sshpass -e scp -o StrictHostKeyChecking=accept-new /tmp/arcanes.tgz "$USER_@$HOST:$DEST/.deploy.tgz"
-          sshpass -e ssh -o StrictHostKeyChecking=accept-new "$USER_@$HOST" \
-            "set -e; cd '$DEST'; tar xzf .deploy.tgz; rm -f .deploy.tgz"
-
-      - name: Installer les dépendances et redémarrer
-        if: steps.check.outputs.ok == 'true'
-        env:
-          SSHPASS: ${{ secrets.IK_SSH_PASSWORD }}
-          HOST: ${{ secrets.IK_SSH_HOST }}
-          USER_: ${{ secrets.IK_SSH_USER }}
-          DEST: ${{ secrets.IK_PATH }}
-        run: |
-          # (pas de « heredoc » : sshpass ne transmet pas l'entrée standard de façon fiable)
-          sshpass -e ssh -o StrictHostKeyChecking=accept-new "$USER_@$HOST" "sh '$DEST/scripts/remote-deploy.sh'"
+          mkdir -p ~/.ssh
+          OPTS="-o StrictHostKeyChecking=accept-new -o ControlMaster=auto -o ControlPath=$HOME/.ssh/cm-%r@%h:%p -o ControlPersist=180 -o LogLevel=ERROR"
+          # connexion maître (la seule qui s'authentifie)
+          sshpass -e ssh $OPTS -fN "$USER_@$HOST"
+          ssh $OPTS "$USER_@$HOST" "mkdir -p '$DEST'"
+          scp $OPTS /tmp/arcanes.tgz "$USER_@$HOST:$DEST/.deploy.tgz"
+          ssh $OPTS "$USER_@$HOST" "cd '$DEST' && tar xzf .deploy.tgz && rm -f .deploy.tgz && echo 'Fichiers envoyés.'"
+          ssh $OPTS "$USER_@$HOST" "sh '$DEST/scripts/remote-deploy.sh'"
+          ssh $OPTS -O exit "$USER_@$HOST" 2>/dev/null || true

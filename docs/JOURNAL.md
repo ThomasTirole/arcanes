@@ -48,7 +48,9 @@ Les plus récentes en haut.
 - Premier déploiement auto : l'envoi des fichiers marche, mais l'étape distante échouait (code 255) —
   `sshpass` + commande passée par l'entrée standard (« heredoc ») ne fonctionne pas. Remplacé par un script
   `scripts/remote-deploy.sh` envoyé avec le code et lancé par une simple commande SSH (cherche aussi npm
-  dans les profils du shell, n'échoue pas si npm est absent).
+  dans les profils du shell, n'échoue pas si npm est absent). Toujours 255 sans aucune sortie : en fait
+  Infomaniak **refuse la 4ᵉ connexion SSH en rafale**. Solution : une seule connexion authentifiée
+  (SSH ControlMaster) réutilisée pour toutes les commandes du déploiement.
 
 **Reste ouvert**
 - Vérifier que le redémarrage automatique est effectif (Infomaniak relance-t-il le processus ?).
