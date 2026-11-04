@@ -66,6 +66,11 @@ Les plus récentes en haut.
 - Roadmap : carte plus grande / adaptée au nombre de joueurs, spectateur qui suit un élève choisi dans la
   liste, cartes médiévales dessinées avec de vrais tiles/assets.
 
+- Après plusieurs essais encore refusés (même avec une seule session SSH), **abandon du déploiement par
+  SSH depuis GitHub** : le workflow ne se lance plus à chaque push (seulement à la main). Nouvelle méthode :
+  la commande de construction du Manager récupère elle-même le code sur GitHub (`git fetch` + `reset --hard`,
+  `data/` intact) ; mettre à jour = « Build » puis « Run ».
+
 **Reste ouvert**
 - La version qui tournait avant ne connaît pas `.restart` : la première fois, relancer l'application à la
   main depuis le Manager. Ensuite, vérifier sur quelques déploiements que la relance auto est fiable.

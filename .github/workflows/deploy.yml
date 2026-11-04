@@ -12,9 +12,9 @@
 
 name: Déployer sur Infomaniak
 
+# Désactivé sur push : Infomaniak refuse les connexions SSH venant de GitHub. Mise à jour via le
+# bouton « Build » du Manager (voir README). Ce workflow reste lançable à la main pour essayer.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:

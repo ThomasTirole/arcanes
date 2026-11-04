@@ -23,34 +23,29 @@ Puis ouvrir http://localhost:3000/prof. Sur le réseau de l'école, les élèves
 `npm test` lance les tests unitaires (correction des questions, import Excel) puis une partie simulée
 (1 prof + 4 robots).
 
-## Mise en ligne (Infomaniak, déploiement automatique)
+## Mise en ligne (Infomaniak)
 
-Le site tourne sur l'hébergement Node.js Infomaniak (`quiz.tirtho.ch`). **Chaque push sur `main` est
-déployé automatiquement** par GitHub Actions (`.github/workflows/deploy.yml`) :
+Le site tourne sur l'hébergement Node.js Infomaniak (`quiz.tirtho.ch`). **Mettre à jour = cliquer sur
+« Build » puis « Run » dans le Manager** : la commande de construction va chercher la dernière version sur
+GitHub elle-même, sans aucune connexion SSH depuis l'extérieur.
 
-1. il **attend qu'aucune partie ne soit en cours** (`/api/status`, jusqu'à 20 min) ;
-2. en **une seule session SSH** (Infomaniak refuse les sessions rapprochées au-delà de ~3) : envoi de
-   l'archive, déballage dans le site (le dossier `data/` avec les quiz n'est jamais touché), puis
-   `scripts/remote-deploy.sh` qui réinstalle les dépendances si `package.json` a changé et écrit `.restart` ;
-3. le serveur Node voit `.restart` et se relance dès qu'aucune partie n'est en cours (Infomaniak relance
-   automatiquement le processus) ;
-4. le workflow vérifie que `/api/status` renvoie la nouvelle version.
+Réglages du site dans le Manager (onglet Node.js) :
 
-Attention : évite quand même de pousser pendant un cours.
+- **Commande de construction** (dépôt privé : remplacer `JETON` par un jeton GitHub en lecture seule) :
 
-Secrets à créer une fois dans GitHub → *Settings → Secrets and variables → Actions* :
+  ```
+  [ -d .git ] || { git init -q && git remote add origin https://x-access-token:JETON@github.com/ThomasTirole/arcanes.git; }; git fetch --depth 1 origin main && git reset --hard FETCH_HEAD && npm install --omit=dev
+  ```
 
-| Secret | Valeur |
-|---|---|
-| `IK_SSH_HOST` | hôte SSH (Manager Infomaniak → FTP / SSH) |
-| `IK_SSH_USER` | utilisateur du compte SSH de l'environnement Node.js |
-| `IK_SSH_PASSWORD` | son mot de passe |
-| `IK_PATH` | `/srv/customer/sites/quiz.tirtho.ch` |
+  `git reset --hard` remplace uniquement les fichiers du projet : `data/` (les quiz) et `node_modules/` ne
+  sont pas suivis par Git et restent intacts.
+- **Commande de lancement** : `ADMIN_PASSWORD=… node server.js` (sans `ADMIN_PASSWORD`, le mot de passe prof
+  est `arcanes`).
 
-Le déploiement peut aussi être relancé à la main : onglet *Actions → Déployer sur Infomaniak → Run workflow*.
+`/api/status` indique la version en ligne, l'heure de démarrage (UTC) et le nombre de parties en cours.
 
-Réglages du site dans le Manager (onglet Node.js) : construction `npm install --omit=dev`, lancement
-`ADMIN_PASSWORD=… node server.js`. Sans `ADMIN_PASSWORD`, le mot de passe prof est `arcanes`.
+Le déploiement automatique par GitHub Actions (`.github/workflows/deploy.yml`) est **désactivé** : Infomaniak
+refuse les connexions SSH venant de GitHub. Il reste lançable à la main (onglet *Actions*) pour réessayer.
 
 Le temps réel passe par Socket.io (WebSocket, avec repli automatique en long-polling si un proxy bloque).
 

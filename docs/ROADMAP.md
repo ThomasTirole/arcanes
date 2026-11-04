@@ -9,7 +9,8 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 
 ## Prochaines étapes
 
-- [ ] Valider le **déploiement automatique** (connexion SSH depuis GitHub refusée par Infomaniak : à éclaircir)
+- [ ] Mettre en place la **mise à jour par « Build »** (commande de construction qui récupère le code sur GitHub)
+- [ ] **[idée]** Retenter un vrai déploiement automatique plus tard (API Infomaniak, ou demander au support pourquoi le SSH depuis GitHub est refusé)
 - [ ] Tester l'Arène en vraie classe (réseau de l'école, 20+ élèves) et régler l'équilibrage
       (dégâts, munitions, rythme des vagues)
 - [ ] **Cartes vraiment belles, thème médiéval**, dessinées avec des tiles / assets (ex. packs Kenney ou
@@ -63,7 +64,7 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 
 ## Technique
 
-- [x] **[fait]** Dépôt GitHub + déploiement automatique sur Infomaniak (session 4)
+- [x] **[fait]** Dépôt GitHub (session 4) — déploiement auto par SSH abandonné, mise à jour via « Build »
 - [ ] Sauvegarde automatique de `data/quizzes.json` (copie datée, ou export vers GitHub)
 - [ ] Comptes prof multiples (collègues) avec quiz séparés
 - [ ] Tester la charge (30 élèves) et la consommation réseau à l'école
