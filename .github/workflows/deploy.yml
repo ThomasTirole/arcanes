@@ -60,14 +60,15 @@ jobs:
           USER_: ${{ secrets.IK_SSH_USER }}
           DEST: ${{ secrets.IK_PATH }}
         run: |
+          set -x
           sudo apt-get install -y -qq sshpass > /dev/null
           tar czf /tmp/arcanes.tgz \
             --exclude=./.git --exclude=./.github --exclude=./node_modules \
             --exclude=./data --exclude=./test --exclude=./docs --exclude=./CLAUDE.md .
           mkdir -p ~/.ssh
-          OPTS="-o StrictHostKeyChecking=accept-new -o ControlMaster=auto -o ControlPath=$HOME/.ssh/cm-%r@%h:%p -o ControlPersist=180 -o LogLevel=ERROR"
+          OPTS="-o StrictHostKeyChecking=accept-new -o ControlMaster=auto -o ControlPath=$HOME/.ssh/cm-%r@%h:%p -o ControlPersist=180"
           # connexion maître (la seule qui s'authentifie)
-          sshpass -e ssh $OPTS -fN "$USER_@$HOST"
+          sshpass -e ssh $OPTS -fN "$USER_@$HOST" || { echo "Connexion SSH refusée (code $?)"; exit 1; }
           ssh $OPTS "$USER_@$HOST" "mkdir -p '$DEST'"
           scp $OPTS /tmp/arcanes.tgz "$USER_@$HOST:$DEST/.deploy.tgz"
           ssh $OPTS "$USER_@$HOST" "cd '$DEST' && tar xzf .deploy.tgz && rm -f .deploy.tgz && echo 'Fichiers envoyés.'"
