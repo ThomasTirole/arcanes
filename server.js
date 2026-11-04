@@ -4,6 +4,7 @@ const express = require('express');
 const http = require('http');
 const path = require('path');
 const crypto = require('crypto');
+const fs = require('fs');
 const { Server } = require('socket.io');
 const { QuizStore } = require('./lib/quizzes');
 const modes = require('./modes');
@@ -161,6 +162,7 @@ io.on('connection', socket => {
   };
 
   socket.on('player:answer', withPlayer((room, p, msg) => room.answer(p, Array.isArray(msg.choices) ? msg.choices : [])));
+  socket.on('player:continue', withPlayer((room, p) => room.skipFeedback(p)));
   // actions propres au mode : { type: 'input' | 'cast' | …, …données }
   socket.on('player:action', withPlayer((room, p, msg) => room.handleAction(p, msg.type, msg)));
 
@@ -178,6 +180,34 @@ setInterval(() => {
     if (now - room.lastActivity > 45 * 60000) { room.destroy(); rooms.delete(code); }
   }
 }, 60000);
+
+// ---------------------------------------------------------------------------
+// Redémarrage après un déploiement automatique (GitHub Actions)
+// Le déploiement touche le fichier .restart ; on quitte le processus dès qu'aucune
+// partie n'est en cours, et Infomaniak le relance avec la nouvelle version.
+// ---------------------------------------------------------------------------
+const RESTART_FILE = path.join(__dirname, '.restart');
+let restartWanted = false;
+
+function busyRooms() {
+  return [...rooms.values()].filter(r => r.state === 'playing'
+    || (r.state === 'lobby' && [...r.players.values()].some(p => p.connected))).length;
+}
+
+fs.watchFile(RESTART_FILE, { interval: 5000 }, (cur, prev) => {
+  if (cur.mtimeMs && cur.mtimeMs !== prev.mtimeMs) {
+    restartWanted = true;
+    console.log('🔄 Nouvelle version déployée : redémarrage dès qu\'aucune partie n\'est en cours.');
+  }
+});
+
+setInterval(() => {
+  if (!restartWanted) return;
+  const busy = busyRooms();
+  if (busy) { console.log(`🔄 Redémarrage en attente (${busy} partie(s) en cours).`); return; }
+  console.log('🔄 Redémarrage pour appliquer la mise à jour.');
+  process.exit(3);
+}, 15000);
 
 server.listen(PORT, () => {
   const list = modes.list().map(m => m.name).join(', ');

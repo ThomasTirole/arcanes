@@ -1,9 +1,11 @@
 // Mode « Arène » — côté navigateur (élève + vue spectateur du prof).
-// Le rendu canvas est dans render.js ; les questions sont gérées par la page commune.
+// Le joueur local est simulé directement dans le navigateur (aucun délai ressenti) ;
+// le serveur vérifie les positions et reste maître des dégâts.
 (function () {
   'use strict';
 
   const MOVE = { ArrowUp: 'u', KeyW: 'u', ArrowDown: 'd', KeyS: 'd', ArrowLeft: 'l', KeyA: 'l', ArrowRight: 'r', KeyD: 'r' };
+  const SEND_EVERY = 33;     // ms entre deux envois de position (~30 par seconde)
 
   function feedLine(el, f) {
     return f.a
@@ -17,12 +19,26 @@
     setTimeout(() => line.remove(), 5200);
   }
 
+  function wireRenderer(socket, renderer) {
+    socket.on('state', s => renderer.pushState(s));
+    socket.on('dmg', e => renderer.onDamage(e));
+    socket.on('proj', e => renderer.onProj(e));
+    socket.on('projx', e => renderer.onProjEnd(e));
+  }
+
   // ------------------------------------------------------------------ élève
   function createPlayer(ctx) {
     const { socket, root, info, myId } = ctx;
     const { el } = ctx.ui;
-    let slot = 0, myAmmo = [0, 0, 0], stuns = 0;
+    const Phys = window.ArenaPhysics;
+    const R = info.playerR;
+    let slot = 0, myAmmo = [0, 0, 0], stuns = 0, shotSeq = 0;
+    const lastCastAt = {};
     const keys = { u: false, d: false, l: false, r: false };
+    // joueur local prédit
+    const me = { x: 0, y: 0, dirX: 1, dirY: 0, aim: null, tp: -1, state: 'l', frozen: false, ready: false };
+    let lastSent = 0, sentX = null, sentY = null, lastFrame = performance.now();
+    let mouseAim = null, mouseAt = 0;
 
     const canvas = el('canvas', { class: 'arena-canvas' });
     const spells = el('div', { class: 'spells' });
@@ -38,64 +54,96 @@
         el('kbd', null, 'Espace'), '/clic lancer  •  ', el('kbd', null, 'R'), ' recharger'));
 
     const renderer = window.ArenaRender.createRenderer(canvas, info);
+    renderer.setLocal(myId, () => (me.ready && me.state === 'a' ? me : null));
+    wireRenderer(socket, renderer);
+
     const boxes = info.spells.map((s, i) => {
       const box = el('div', { class: 'spell', style: `--sc:${s.color}`, title: s.name },
         el('span', { class: 'key' }, String(i + 1)),
         el('div', { class: 'ico' }, s.icon),
         el('div', { class: 'ammo' }, `0/${s.max}`),
-        el('div', { class: 'bar' }, el('i', { style: 'width:0%' })));
+        el('div', { class: 'bar' }, el('i', { style: 'width:0%' })),
+        el('div', { class: 'cd' }));
       spells.append(box);
       return box;
     });
 
-    function updateHud() {
+    function updateHud(now) {
       info.spells.forEach((s, i) => {
         const box = boxes[i];
         box.classList.toggle('active', i === slot);
         box.classList.toggle('empty', myAmmo[i] <= 0);
         box.querySelector('.ammo').textContent = `${myAmmo[i]}/${s.max}`;
         box.querySelector('.bar i').style.width = `${(myAmmo[i] / s.max) * 100}%`;
+        const left = Math.max(0, (lastCastAt[i] || 0) + s.cd - now);
+        box.querySelector('.cd').style.height = `${(left / s.cd) * 100}%`;
       });
       scoreEl.textContent = stuns;
     }
 
     // ---- réseau
     socket.on('state', s => {
-      renderer.pushState(s);
-      const me = s.ps.find(p => p.i === myId);
-      if (me) myAmmo = me.am;
+      const p = s.ps.find(q => q.i === myId);
+      if (!p) return;
+      me.state = p.s;
+      me.frozen = !!p.f;
+      if (p.t !== me.tp) {           // réapparition : on reprend la position donnée par le serveur
+        me.tp = p.t; me.x = p.x; me.y = p.y; me.ready = true;
+        sentX = null;
+      } else if (Math.hypot(p.x - me.x, p.y - me.y) > 140) {
+        // le serveur a refusé un déplacement (rare) : on se recale en douceur
+        me.x += (p.x - me.x) * 0.5; me.y += (p.y - me.y) * 0.5;
+      }
     });
-    socket.on('fx', e => renderer.addFx(e));
+    socket.on('ammo', a => { myAmmo = a; });
+    socket.on('castfail', m => renderer.onCastFail(m.shot));
+    socket.on('fx', e => { if (!(e.t === 'nova' && e.o === myId)) renderer.addFx(e); });
     socket.on('feed', f => pushFeed(feed, feedLine(el, f), 5));
     socket.on('you:scored', m => { stuns = m.stuns; ctx.banner(`💥 ${m.victim} étourdi !`, '#fde047'); });
     socket.on('you:stunned', m => ctx.banner(m.by ? `Étourdi par ${m.by} !` : 'Étourdi !', '#f87171'));
 
     // ---- clavier / souris
-    const sendKeys = () => ctx.action('input', { keys });
-    function releaseAll() {
-      let changed = false;
-      for (const k of Object.keys(keys)) if (keys[k]) { keys[k] = false; changed = true; }
-      if (changed) sendKeys();
-    }
+    function releaseAll() { for (const k of Object.keys(keys)) keys[k] = false; }
 
-    function cast(aim) {
+    function cast(aimPoint) {
+      if (!me.ready || me.state !== 'a' || me.frozen) return;
       // si le sort choisi est vide, on prend automatiquement le suivant qui a des munitions
       if (myAmmo[slot] <= 0) {
         const next = myAmmo.findIndex(a => a > 0);
-        if (next >= 0) slot = next;
+        if (next < 0) return;
+        slot = next;
       }
-      ctx.action('cast', { slot, aim });
+      const s = info.spells[slot];
+      const now = performance.now();
+      if (now - (lastCastAt[slot] || 0) < s.cd) return;
+      lastCastAt[slot] = now;
+
+      let dx = me.dirX, dy = me.dirY;
+      if (aimPoint) {
+        const ax = aimPoint.x - me.x, ay = aimPoint.y - me.y, d = Math.hypot(ax, ay);
+        if (d > 1) { dx = ax / d; dy = ay / d; }
+      }
+      const shot = ++shotSeq;
+      myAmmo[slot]--;
+      // effet immédiat, sans attendre le serveur
+      if (s.kind === 'proj') {
+        const speed = s.speed;
+        renderer.localCast('proj', {
+          s: slot, o: myId, sh: shot,
+          x: me.x + dx * (R + s.r + 2), y: me.y + dy * (R + s.r + 2), vx: dx * speed, vy: dy * speed,
+        });
+      } else if (s.kind === 'nova') {
+        renderer.localCast('nova', { x: me.x, y: me.y, r: s.r, c: s.color });
+      }
+      sendPos(true);
+      ctx.action('cast', { slot, aim: { x: me.x + dx * 100, y: me.y + dy * 100 }, shot });
     }
 
     window.addEventListener('keydown', e => {
       if (!ctx.isPlaying() || ctx.quizOpen()) return;
       const m = MOVE[e.code];
-      if (m) {
-        e.preventDefault();
-        if (!keys[m]) { keys[m] = true; sendKeys(); }
-        return;
-      }
-      if (e.code === 'Space') { e.preventDefault(); cast(null); return; }
+      if (m) { e.preventDefault(); keys[m] = true; return; }
+      if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) cast(null); return; }
       const digit = /^(Digit|Numpad)([1-9])$/.exec(e.code);
       if (digit) {
         const i = Number(digit[2]) - 1;
@@ -104,24 +152,53 @@
       }
       if (e.code === 'KeyR') ctx.action('reload', {});
     });
-    window.addEventListener('keyup', e => {
-      const m = MOVE[e.code];
-      if (m && keys[m]) { keys[m] = false; sendKeys(); }
-    });
+    window.addEventListener('keyup', e => { const m = MOVE[e.code]; if (m) keys[m] = false; });
     window.addEventListener('blur', releaseAll);
     canvas.addEventListener('mousedown', e => {
       if (!ctx.isPlaying() || ctx.quizOpen() || e.button !== 0) return;
       e.preventDefault();
       cast(renderer.screenToWorld(e.clientX, e.clientY));
     });
+    canvas.addEventListener('mousemove', e => {
+      mouseAim = renderer.screenToWorld(e.clientX, e.clientY);
+      mouseAt = performance.now();
+    });
     canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+    // ---- simulation locale + envoi de la position
+    function sendPos(force) {
+      const now = performance.now();
+      if (!me.ready || me.state !== 'a') return;
+      if (!force && now - lastSent < SEND_EVERY) return;
+      if (!force && sentX === Math.round(me.x) && sentY === Math.round(me.y)) return;
+      lastSent = now;
+      sentX = Math.round(me.x); sentY = Math.round(me.y);
+      ctx.action('pos', { x: sentX, y: sentY, dx: +me.dirX.toFixed(3), dy: +me.dirY.toFixed(3), tp: me.tp });
+    }
+
+    function simulate() {
+      const now = performance.now();
+      const dt = Math.min(0.05, (now - lastFrame) / 1000);
+      lastFrame = now;
+      if (me.ready && me.state === 'a' && !me.frozen && !ctx.quizOpen()) {
+        Phys.step(me, keys, info.speed, dt, R, info.map);
+      }
+      // la souris oriente le bâton si elle a bougé récemment, sinon la direction de marche
+      const moving = keys.u || keys.d || keys.l || keys.r;
+      me.aim = mouseAim && now - mouseAt < 1500 && !moving ? Math.atan2(mouseAim.y - me.y, mouseAim.x - me.x) : null;
+      sendPos(false);
+    }
 
     // ---- interface attendue par la page commune
     return {
       setPlayers: list => renderer.setPlayers(list),
-      frame() { renderer.draw(myId); updateHud(); },
+      frame() {
+        simulate();
+        renderer.draw(myId, { orb: info.spells[slot].color, follow: true });
+        updateHud(performance.now());
+      },
       hide: releaseAll,
-      onStart() { stuns = 0; myAmmo = [0, 0, 0]; },
+      onStart() { stuns = 0; myAmmo = [0, 0, 0]; me.ready = false; me.tp = -1; },
       onRejoin(res) { if (res.score) stuns = res.score.stuns || 0; },
       reasons: {
         revive: ['Réponds pour revenir dans l\'arène', '#fca5a5'],
@@ -143,7 +220,7 @@
     const feed = el('div', { class: 'feed', style: 'top:12px' });
     root.replaceChildren(canvas, feed);
     const renderer = window.ArenaRender.createRenderer(canvas, info);
-    socket.on('state', s => renderer.pushState(s));
+    wireRenderer(socket, renderer);
     socket.on('fx', e => renderer.addFx(e));
     socket.on('feed', f => pushFeed(feed, feedLine(el, f), 6));
     return {
@@ -154,7 +231,7 @@
 
   window.ArcanesModes.register('arena', {
     css: ['arena.css'],
-    scripts: ['render.js'],
+    scripts: ['physics.js', 'render.js'],
     createPlayer,
     createSpectator,
   });

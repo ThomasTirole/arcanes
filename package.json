@@ -1,11 +1,11 @@
 {
   "name": "arcanes",
-  "version": "0.1.0",
-  "description": "Arène de révision multijoueur pour la classe",
+  "version": "0.3.0",
+  "description": "Ar\u00e8ne de r\u00e9vision multijoueur pour la classe",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node test/simulation.js"
+    "test": "node test/unit.js && node test/simulation.js"
   },
   "license": "UNLICENSED",
   "dependencies": {

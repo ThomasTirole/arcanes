@@ -59,6 +59,7 @@ async function main() {
   host.on('clock', c => { if (typeof c.tl === 'number' && typeof c.nq === 'number') clocks++; });
 
   // robots
+  let projEvents = 0, dmgEvents = 0;
   const bots = [];
   for (let n = 0; n < 4; n++) {
     const s = io(URL);
@@ -87,6 +88,10 @@ async function main() {
     s.on('quiz:done', () => bot.done++);
     s.on('you:scored', () => bot.scored++);
     s.on('state', st => { bot.state = st; bot.me = st.ps.find(p => p.i === bot.id); });
+    bot.ammo = [0, 0, 0];
+    s.on('ammo', a => { bot.ammo = a; });
+    s.on('proj', () => { projEvents++; });
+    s.on('dmg', () => { dmgEvents++; });
     s.on('game:ended', r => { bot.ended = r; });
     bots.push(bot);
   }
@@ -110,7 +115,7 @@ async function main() {
       if (!target) continue;
       const dx = target.x - b.me.x, dy = target.y - b.me.y;
       b.s.emit('player:action', { type: 'input', keys: { u: dy < -20, d: dy > 20, l: dx < -20, r: dx > 20 } });
-      const slot = best < 150 && b.me.am[1] > 0 ? 1 : b.me.am[2] > 0 && Math.random() < 0.2 ? 2 : 0;
+      const slot = best < 150 && b.ammo[1] > 0 ? 1 : b.ammo[2] > 0 && Math.random() < 0.2 ? 2 : 0;
       b.s.emit('player:action', { type: 'cast', slot, aim: { x: target.x, y: target.y } });
     }
   }, 150);
@@ -144,6 +149,12 @@ async function main() {
   }
   if (!states || !hostStats || !clocks) fail('pas de diffusion d\'état / horloge');
   if (!report.mode || report.mode.id !== 'arena' || !report.mode.columns.length) fail('rapport sans infos de mode');
+  if (!projEvents) fail('aucun évènement de projectile');
+  for (const q of report.questions) {
+    if (!Array.isArray(q.picks) || q.picks.length !== q.choices.length) fail('statistiques par réponse manquantes');
+    if (q.asked - q.correct !== q.wrong.reduce((n, w) => n + w.count, 0)) fail('liste des élèves en erreur incohérente');
+  }
+  console.log('Projectiles :', projEvents, '— dégâts :', dmgEvents);
   const totalStuns = report.rows.reduce((s, r) => s + r.stuns, 0);
   const totalGot = report.rows.reduce((s, r) => s + r.gotStunned, 0);
   const asked = report.questions.reduce((s, q) => s + q.asked, 0);

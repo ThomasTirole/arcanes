@@ -18,6 +18,7 @@
     .quizitem .t { font-weight: 600; font-size: 19px; }
     .qcard { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
     .qcard .qn { font-weight: 700; color: var(--accent); }
+    .qcard textarea.explain-input { min-height: 44px; font-size: 15px; border-style: dashed; }
     .chrow { display: flex; gap: 8px; align-items: center; }
     .chrow input[type=text] { padding: 9px 12px; }
     .chrow label { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 14px; white-space: nowrap; cursor: pointer; }
@@ -49,8 +50,26 @@
     @media (max-width: 800px) { .side { display: none; } }
 
     .qreport { display: flex; flex-direction: column; gap: 8px; }
-    .qrep { display: grid; grid-template-columns: 1fr 160px 60px; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+    .qrep { border: 1px solid var(--line); border-radius: 12px; background: var(--bg2); overflow: hidden; }
+    .qrep > summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 1fr 160px 60px 20px; gap: 12px; align-items: center; padding: 12px 14px; }
+    .qrep > summary::-webkit-details-marker { display: none; }
+    .qrep > summary:hover { background: rgba(255,255,255,.03); }
+    .qrep .chev { color: var(--muted); transition: transform .15s; }
+    .qrep[open] .chev { transform: rotate(90deg); }
     .qrep .pc { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .qdetail { padding: 4px 14px 16px; display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--line); }
+    .qsplit { display: flex; height: 26px; border-radius: 8px; overflow: hidden; font-size: 13px; font-weight: 700; }
+    .qsplit span { display: flex; align-items: center; justify-content: center; min-width: 0; white-space: nowrap; overflow: hidden; }
+    .opt { display: grid; grid-template-columns: 22px 1fr 140px 64px; gap: 10px; align-items: center; font-size: 15px; }
+    .opt .ok { color: #4ade80; font-weight: 700; }
+    .opt .bar { height: 10px; background: rgba(255,255,255,.08); border-radius: 5px; overflow: hidden; }
+    .opt .bar i { display: block; height: 100%; }
+    .opt .n { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .explain { background: rgba(167,139,250,.1); border-left: 3px solid var(--accent); border-radius: 8px; padding: 10px 12px; font-size: 15px; }
+    .wronglist { display: flex; flex-wrap: wrap; gap: 6px; }
+    .wronglist .chip { padding: 3px 10px 3px 6px; font-size: 14px; font-weight: 500; }
+    .wronglist .chip .dot { width: 12px; height: 12px; }
+    @media (max-width: 640px) { .qrep > summary { grid-template-columns: 1fr 50px 20px; } .qrep > summary .accbar { display: none; } .opt { grid-template-columns: 22px 1fr 50px; } .opt .bar { display: none; } }
     .stat { background: var(--card2); border: 1px solid var(--line); border-radius: 14px; padding: 14px 18px; flex: 1; min-width: 200px; }
     .stat .lbl { color: var(--muted); font-size: 14px; }
     .stat .val { font-size: 30px; font-weight: 700; }
@@ -76,7 +95,8 @@
   <div class="topline">
     <h1>Mes quiz</h1>
     <div class="row">
-      <label class="btn">Importer JSON<input id="importNew" type="file" accept=".json,application/json" hidden></label>
+      <button class="btn" id="dlTemplate" title="Modèle Excel à remplir">⬇ Modèle Excel</button>
+      <label class="btn">Importer (Excel, CSV, JSON)<input id="importNew" type="file" accept=".xlsx,.xls,.csv,.json" hidden></label>
       <button class="btn primary" id="newQuiz">+ Nouveau quiz</button>
     </div>
   </div>
@@ -89,7 +109,8 @@
   <div class="topline">
     <h1 id="editorHeading">Nouveau quiz</h1>
     <div class="row">
-      <label class="btn small">Importer des questions<input id="importInto" type="file" accept=".json,application/json" hidden></label>
+      <label class="btn small">Ajouter depuis un fichier<input id="importInto" type="file" accept=".xlsx,.xls,.csv,.json" hidden></label>
+      <button class="btn small" id="exportXlsx">Exporter Excel</button>
       <button class="btn small" id="exportQuiz">Exporter JSON</button>
     </div>
   </div>
@@ -187,13 +208,15 @@
   <div class="card" style="margin-bottom:16px"><table class="board" id="resTable"></table></div>
   <div class="card">
     <div style="font-weight:700;font-size:20px;margin-bottom:4px">Rapport par question</div>
-    <div class="muted" style="font-size:14px;margin-bottom:10px">Triées de la plus ratée à la mieux réussie — de quoi savoir quoi reprendre.</div>
+    <div class="muted" style="font-size:14px;margin-bottom:10px">Triées de la plus ratée à la mieux réussie. Clique sur une question pour voir les réponses choisies, les élèves qui se sont trompés et l’explication.</div>
     <div id="resQuestions" class="qreport"></div>
   </div>
 </section>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="/vendor/xlsx.full.min.js"></script>
 <script src="/js/common.js"></script>
+<script src="/js/import.js"></script>
 <script src="/js/prof.js"></script>
 </body>
 </html>

@@ -1,0 +1,88 @@
+# Déploiement automatique sur l'hébergement Node.js Infomaniak.
+# À chaque push sur main (ou à la main depuis l'onglet Actions), les fichiers sont
+# envoyés par SSH, les dépendances installées, puis le serveur redémarre tout seul
+# dès qu'aucune partie n'est en cours (voir le fichier .restart dans server.js).
+#
+# Secrets à créer dans GitHub (Settings → Secrets and variables → Actions) :
+#   IK_SSH_HOST      hôte SSH Infomaniak (affiché dans le Manager, menu FTP / SSH)
+#   IK_SSH_USER      utilisateur du compte SSH créé pour l'environnement Node.js
+#   IK_SSH_PASSWORD  mot de passe de ce compte
+#   IK_PATH          dossier du site, ex. /srv/customer/sites/quiz.tirtho.ch
+# Le dossier data/ (les quiz enregistrés) n'est jamais envoyé ni écrasé.
+
+name: Déployer sur Infomaniak
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Vérifier les secrets
+        id: check
+        env:
+          IK_SSH_HOST: ${{ secrets.IK_SSH_HOST }}
+          IK_SSH_USER: ${{ secrets.IK_SSH_USER }}
+          IK_SSH_PASSWORD: ${{ secrets.IK_SSH_PASSWORD }}
+          IK_PATH: ${{ secrets.IK_PATH }}
+        run: |
+          missing=""
+          for v in IK_SSH_HOST IK_SSH_USER IK_SSH_PASSWORD IK_PATH; do
+            [ -z "${!v}" ] && missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::warning::Déploiement ignoré, secrets manquants :$missing (Settings → Secrets and variables → Actions)"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Vérifier le code (syntaxe)
+        run: for f in server.js lib/*.js modes/*.js modes/*/server.js; do node --check "$f"; done
+
+      - name: Envoyer les fichiers
+        if: steps.check.outputs.ok == 'true'
+        env:
+          SSHPASS: ${{ secrets.IK_SSH_PASSWORD }}
+          HOST: ${{ secrets.IK_SSH_HOST }}
+          USER_: ${{ secrets.IK_SSH_USER }}
+          DEST: ${{ secrets.IK_PATH }}
+        run: |
+          sudo apt-get install -y -qq sshpass > /dev/null
+          tar czf /tmp/arcanes.tgz \
+            --exclude=./.git --exclude=./.github --exclude=./node_modules \
+            --exclude=./data --exclude=./test --exclude=./docs --exclude=./CLAUDE.md .
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new "$USER_@$HOST" "mkdir -p '$DEST'"
+          sshpass -e scp -o StrictHostKeyChecking=accept-new /tmp/arcanes.tgz "$USER_@$HOST:$DEST/.deploy.tgz"
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new "$USER_@$HOST" \
+            "set -e; cd '$DEST'; tar xzf .deploy.tgz; rm -f .deploy.tgz"
+
+      - name: Installer les dépendances et redémarrer
+        if: steps.check.outputs.ok == 'true'
+        env:
+          SSHPASS: ${{ secrets.IK_SSH_PASSWORD }}
+          HOST: ${{ secrets.IK_SSH_HOST }}
+          USER_: ${{ secrets.IK_SSH_USER }}
+          DEST: ${{ secrets.IK_PATH }}
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new "$USER_@$HOST" bash -l <<EOF
+          set -e
+          cd '$DEST'
+          if command -v npm > /dev/null; then
+            npm install --omit=dev --no-audit --no-fund
+          else
+            echo "npm introuvable en SSH : lance « Build » depuis le Manager si les dépendances ont changé."
+          fi
+          date > .restart
+          echo "Déploiement terminé, le serveur redémarre dès qu'aucune partie n'est en cours."
+          EOF

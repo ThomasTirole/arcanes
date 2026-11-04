@@ -105,7 +105,8 @@ kbd { background: var(--card2); border: 1px solid var(--line); border-bottom-wid
 .choice.wrong { border-color: #f87171; box-shadow: 0 0 0 5px rgba(248,113,113,.5); }
 .choices.locked .choice { cursor: default; }
 .choices.locked .choice:not(.right):not(.selected) { opacity: .45; }
-.qfoot { display: flex; justify-content: center; margin-top: 16px; min-height: 56px; align-items: center; }
+.qfoot { display: flex; flex-direction: column; justify-content: center; margin-top: 16px; min-height: 56px; align-items: center; gap: 12px; }
+.qexplain { background: rgba(167,139,250,.14); border-left: 4px solid var(--accent); border-radius: 10px; padding: 12px 16px; font-size: 19px; max-width: 100%; text-align: left; }
 .qresult { font-size: 26px; font-weight: 700; }
 .qresult.good { color: #4ade80; }
 .qresult.bad { color: #f87171; }

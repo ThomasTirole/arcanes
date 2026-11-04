@@ -86,32 +86,30 @@
 
   $('#newQuiz').addEventListener('click', () => openEditor(null));
 
-  $('#importNew').addEventListener('change', async e => {
-    const data = await readJsonFile(e.target);
-    if (!data) return;
-    const qs = normalizeImport(data);
-    if (!qs) { $('#dashError').textContent = 'Fichier JSON non reconnu (voir le README pour le format).'; return; }
-    editing = { id: null, title: (data.title || 'Quiz importé').slice(0, 100), questions: qs };
-    renderEditor();
-  });
-
-  async function readJsonFile(input) {
+  // ---- import (Excel / CSV / JSON, compatible avec les fichiers Wayground)
+  async function importFile(input, onError) {
     const f = input.files[0];
     input.value = '';
     if (!f) return null;
-    try { return JSON.parse(await f.text()); } catch (e) { alert('Fichier JSON invalide.'); return null; }
+    try {
+      const res = await window.QuizIO.readQuizFile(f);
+      if (!res.questions.length) throw new Error('Aucune question valable dans ce fichier.');
+      const notes = [];
+      if (res.skipped) notes.push(`${res.skipped} question(s) ignorée(s) (type non pris en charge : réponse libre, sondage…)`);
+      if (res.errors.length) notes.push(`${res.errors.length} ligne(s) non importée(s) :\n- ${res.errors.slice(0, 8).join('\n- ')}`);
+      if (notes.length) alert(`${res.questions.length} question(s) importée(s).\n\n${notes.join('\n\n')}`);
+      return res;
+    } catch (e) { onError(e.message); return null; }
   }
 
-  // accepte { title, questions:[...] } ou directement [...]
-  function normalizeImport(data) {
-    const arr = Array.isArray(data) ? data : data && data.questions;
-    if (!Array.isArray(arr)) return null;
-    return arr.filter(q => q && q.text && Array.isArray(q.choices)).map(q => ({
-      text: String(q.text),
-      choices: q.choices.map(String).slice(0, 6),
-      correct: Array.isArray(q.correct) ? q.correct.map(Number) : [Number(q.correct) || 0],
-    }));
-  }
+  $('#importNew').addEventListener('change', async e => {
+    const res = await importFile(e.target, m => { $('#dashError').textContent = m; });
+    if (!res) return;
+    editing = { id: null, title: (res.title || 'Quiz importé').slice(0, 100), questions: res.questions };
+    renderEditor();
+  });
+
+  $('#dlTemplate').addEventListener('click', () => window.QuizIO.downloadTemplate());
 
   // ---------------------------------------------------------------- éditeur
   async function openEditor(id) {
@@ -126,7 +124,7 @@
     renderEditor();
   }
 
-  function blankQuestion() { return { text: '', choices: ['', '', '', ''], correct: [] }; }
+  function blankQuestion() { return { text: '', choices: ['', '', '', ''], correct: [], explanation: '' }; }
 
   function renderEditor() {
     go('editor');
@@ -147,6 +145,7 @@
             type: 'checkbox', checked: q.correct.includes(ci),
             onchange: e => {
               q.correct = e.target.checked ? [...new Set([...q.correct, ci])] : q.correct.filter(x => x !== ci);
+              renderQuestions();
             },
           }), 'correcte'),
         el('input', {
@@ -165,6 +164,10 @@
       const textarea = el('textarea', { maxlength: 500, placeholder: 'Énoncé de la question', rows: 2,
         oninput: e => { q.text = e.target.value; } });
       textarea.value = q.text;
+      const explain = el('textarea', { maxlength: 1000, rows: 1, class: 'explain-input',
+        placeholder: 'Explication (facultatif) — montrée à l\'élève quand il se trompe et dans le rapport',
+        oninput: e => { q.explanation = e.target.value; } });
+      explain.value = q.explanation || '';
 
       return el('div', { class: 'qcard' },
         el('div', { class: 'row' },
@@ -186,7 +189,10 @@
             class: 'btn small', disabled: q.choices.length >= 6,
             onclick: () => { q.choices.push(''); renderQuestions(); },
           }, '+ Réponse'),
-          el('span', { class: 'muted', style: 'font-size:13px' }, 'Coche plusieurs réponses pour une question à choix multiples.')));
+          el('span', { class: 'muted', style: 'font-size:13px' },
+            q.correct.length > 1 ? `${q.correct.length} bonnes réponses : l'élève doit toutes les cocher.`
+              : 'Coche plusieurs réponses pour une question à choix multiples.')),
+        explain);
     }));
   }
 
@@ -219,6 +225,7 @@
           text: q.text.trim(),
           choices: keep.map(x => x.c),
           correct: keep.map((x, n) => (q.correct.includes(x.i) ? n : -1)).filter(n => n >= 0),
+          explanation: (q.explanation || '').trim(),
         };
       }),
     };
@@ -236,13 +243,13 @@
     download(blob, (editing.title || 'quiz').replace(/[^\w\-]+/g, '_') + '.json');
   });
 
+  $('#exportXlsx').addEventListener('click', () => window.QuizIO.exportExcel(editing));
+
   $('#importInto').addEventListener('change', async e => {
-    const data = await readJsonFile(e.target);
-    if (!data) return;
-    const qs = normalizeImport(data);
-    if (!qs) { $('#editorError').textContent = 'Fichier JSON non reconnu.'; return; }
-    editing.questions = editing.questions.filter(q => q.text.trim()).concat(qs);
-    if (!editing.title && data.title) editing.title = data.title;
+    const res = await importFile(e.target, m => { $('#editorError').textContent = m; });
+    if (!res) return;
+    editing.questions = editing.questions.filter(q => q.text.trim()).concat(res.questions);
+    if (!editing.title && res.title) editing.title = res.title;
     renderEditor();
   });
 
@@ -448,12 +455,46 @@
       .sort((a, b) => a.pct - b.pct);
     const unasked = r.questions.length - qs.length;
     $('#resQuestions').replaceChildren(
-      ...qs.map(q => el('div', { class: 'qrep' },
-        el('div', null, el('b', null, `Q${q.index + 1}. `), q.text,
-          el('div', { class: 'muted', style: 'font-size:13px' }, `${q.correct}/${q.asked} bonnes réponses`)),
-        el('div', { class: 'accbar' }, el('i', { style: `width:${q.pct}%;background:${pctColor(q.pct)}` })),
-        el('div', { class: 'pc', style: `color:${pctColor(q.pct)}` }, `${q.pct}%`))),
+      ...qs.map(questionReport),
       unasked ? el('div', { class: 'muted', style: 'font-size:14px' }, `${unasked} question(s) n'ont pas été posées pendant cette partie.`) : '');
+  }
+
+  // Une question du rapport, dépliable : répartition juste/faux, réponses choisies, élèves en erreur, explication
+  function questionReport(q) {
+    const wrong = q.asked - q.correct;
+    const answered = q.asked - (q.timeouts || 0);
+    const good = new Set(q.correctChoices || []);
+    const multi = good.size > 1;
+    const pctOf = n => (answered ? Math.round((n / answered) * 100) : 0);
+    const split = el('div', { class: 'qsplit' },
+      q.correct ? el('span', { style: `width:${(q.correct / q.asked) * 100}%;background:#16a34a` }, `✓ ${q.correct} juste${q.correct > 1 ? 's' : ''}`) : '',
+      wrong - (q.timeouts || 0) > 0 ? el('span', { style: `width:${((wrong - q.timeouts) / q.asked) * 100}%;background:#dc2626` }, `✗ ${wrong - q.timeouts} faux`) : '',
+      q.timeouts ? el('span', { style: `width:${(q.timeouts / q.asked) * 100}%;background:#57534e` }, `⏱ ${q.timeouts}`) : '');
+    return el('details', { class: 'qrep' },
+      el('summary', null,
+        el('div', null, el('b', null, `Q${q.index + 1}. `), q.text,
+          el('div', { class: 'muted', style: 'font-size:13px' },
+            `${q.correct} juste${q.correct > 1 ? 's' : ''} · ${wrong} faux${q.timeouts ? ` (dont ${q.timeouts} sans réponse)` : ''} · posée ${q.asked} fois`)),
+        el('div', { class: 'accbar' }, el('i', { style: `width:${q.pct}%;background:${pctColor(q.pct)}` })),
+        el('div', { class: 'pc', style: `color:${pctColor(q.pct)}` }, `${q.pct}%`),
+        el('span', { class: 'chev' }, '›')),
+      el('div', { class: 'qdetail' },
+        split,
+        el('div', { class: 'muted', style: 'font-size:13px' },
+          multi ? `Réponses cochées (question à ${good.size} bonnes réponses : juste seulement si toutes sont cochées, sans erreur)`
+            : 'Réponses choisies'),
+        el('div', { class: 'stack', style: 'gap:6px' }, (q.choices || []).map((c, i) => {
+          const n = (q.picks || [])[i] || 0;
+          return el('div', { class: 'opt' },
+            el('span', { class: good.has(i) ? 'ok' : 'muted' }, good.has(i) ? '✓' : '·'),
+            el('span', { style: good.has(i) ? 'font-weight:600' : '' }, c),
+            el('div', { class: 'bar' }, el('i', { style: `width:${pctOf(n)}%;background:${good.has(i) ? '#22c55e' : '#f87171'}` })),
+            el('span', { class: 'n' }, `${n} · ${pctOf(n)}%`));
+        })),
+        q.wrong && q.wrong.length ? el('div', null,
+          el('div', { class: 'muted', style: 'font-size:13px;margin-bottom:6px' }, 'Se sont trompés'),
+          el('div', { class: 'wronglist' }, q.wrong.map(w => el('span', { class: 'chip' }, dot(w.color), w.name, w.count > 1 ? ` ×${w.count}` : '')))) : '',
+        q.explanation ? el('div', { class: 'explain' }, el('b', null, '💡 Explication : '), q.explanation) : ''));
   }
 
   $('#replay').addEventListener('click', () => socket.emit('host:replay'));
@@ -469,9 +510,11 @@
       lines.push([r.name, ...cols.map(c => r[c.key]), r.correct, r.answered, r.accuracy].map(esc).join(';'));
     }
     lines.push('');
-    lines.push(['Question', 'Posée', 'Juste', '% réussite'].map(esc).join(';'));
+    lines.push(['Question', 'Posée', 'Juste', 'Faux', 'Sans réponse', '% réussite', 'Élèves en erreur', 'Explication'].map(esc).join(';'));
     for (const q of lastReport.questions) {
-      lines.push([q.text, q.asked, q.correct, q.asked ? Math.round((q.correct / q.asked) * 100) : ''].map(esc).join(';'));
+      lines.push([q.text, q.asked, q.correct, q.asked - q.correct, q.timeouts || 0,
+        q.asked ? Math.round((q.correct / q.asked) * 100) : '',
+        (q.wrong || []).map(w => w.name + (w.count > 1 ? ` (x${w.count})` : '')).join(', '), q.explanation || ''].map(esc).join(';'));
     }
     const date = new Date().toISOString().slice(0, 10);
     download(new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }), `arcanes_${date}.csv`);

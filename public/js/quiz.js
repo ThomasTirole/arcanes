@@ -16,7 +16,13 @@
    */
   function createQuizOverlay(opts) {
     const { socket } = opts;
-    let open = false, q = null, selected = new Set(), locked = false, timerRaf = 0;
+    let open = false, q = null, selected = new Set(), locked = false, timerRaf = 0, canSkip = false;
+
+    function skip() {
+      if (!canSkip) return;
+      canSkip = false;
+      socket.emit('player:continue');
+    }
     const mode = () => (opts.getMode && opts.getMode()) || {};
 
     socket.on('quiz:question', data => {
@@ -24,6 +30,7 @@
       q = data;
       selected = new Set();
       locked = false;
+      canSkip = false;
       if (!open && mode().onQuizOpen) mode().onQuizOpen();
       open = true;
       $('#quiz').classList.remove('hidden');
@@ -87,7 +94,7 @@
         if (q && i < q.choices.length) { e.preventDefault(); pick(i); }
       } else if (e.code === 'Enter' || e.code === 'NumpadEnter') {
         e.preventDefault();
-        submit();
+        if (locked) skip(); else submit();
       }
     });
 
@@ -108,6 +115,12 @@
       const msg = res.timeout ? 'Temps écoulé !' : res.correct ? 'Bonne réponse !' : 'Mauvaise réponse';
       $('#qFoot').replaceChildren(el('div', { class: 'qresult ' + (res.correct ? 'good' : 'bad') },
         msg, res.reward ? `   ${res.reward}` : ''));
+      if (res.explanation) {
+        canSkip = !!res.canSkip;
+        $('#qFoot').append(
+          el('div', { class: 'qexplain' }, el('b', null, '💡 '), res.explanation),
+          canSkip ? el('button', { class: 'btn primary', onclick: skip }, 'Continuer (Entrée)') : '');
+      }
       refreshHeader();
     });
 

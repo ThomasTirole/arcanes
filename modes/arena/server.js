@@ -48,34 +48,7 @@ const FREQ = {
   high: { burst: 4, every: 45000 },
 };
 
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-
-function circleHitsRect(x, y, r, o) {
-  const cx = clamp(x, o.x, o.x + o.w);
-  const cy = clamp(y, o.y, o.y + o.h);
-  const dx = x - cx, dy = y - cy;
-  return dx * dx + dy * dy < r * r;
-}
-
-function resolveCircleRect(p, r, o) {
-  const cx = clamp(p.x, o.x, o.x + o.w);
-  const cy = clamp(p.y, o.y, o.y + o.h);
-  const dx = p.x - cx, dy = p.y - cy;
-  const d2 = dx * dx + dy * dy;
-  if (d2 >= r * r) return;
-  if (d2 === 0) {
-    const left = p.x - o.x, right = o.x + o.w - p.x, top = p.y - o.y, bottom = o.y + o.h - p.y;
-    const m = Math.min(left, right, top, bottom);
-    if (m === left) p.x = o.x - r;
-    else if (m === right) p.x = o.x + o.w + r;
-    else if (m === top) p.y = o.y - r;
-    else p.y = o.y + o.h + r;
-    return;
-  }
-  const d = Math.sqrt(d2);
-  p.x += (dx / d) * (r - d);
-  p.y += (dy / d) * (r - d);
-}
+const Phys = require('./public/physics');
 
 const NO_INPUT = () => ({ u: false, d: false, l: false, r: false });
 
@@ -115,14 +88,20 @@ class ArenaSession extends Session {
       map: MAP,
       playerR: PLAYER_R,
       maxHp: MAX_HP,
-      spells: SPELLS.map(s => ({ key: s.key, name: s.name, icon: s.icon, max: s.max, color: s.color, kind: s.kind, r: s.r })),
+      speed: SPEED,
+      projLife: PROJ_LIFE_MS,
+      spells: SPELLS.map(s => ({
+        key: s.key, name: s.name, icon: s.icon, max: s.max, color: s.color, kind: s.kind, r: s.r, cd: s.cd,
+        speed: s.speed || 0,
+        splash: s.splash || 0,
+      })),
     };
   }
 
   initPlayer(p) {
     Object.assign(p, {
-      x: 0, y: 0, dirX: 1, dirY: 0, hp: MAX_HP,
-      input: NO_INPUT(), ammo: [0, 0, 0], lastCast: 0,
+      x: 0, y: 0, dirX: 1, dirY: 0, hp: MAX_HP, tp: 0, lastPosAt: 0,
+      input: NO_INPUT(), ammo: [0, 0, 0], lastCast: [0, 0, 0],
       frozenUntil: 0, stunUntil: 0, invulnUntil: 0, emptySince: 0,
       stuns: 0, gotStunned: 0,
     });
@@ -150,6 +129,8 @@ class ArenaSession extends Session {
 
   onEnd() { this.projectiles = []; }
 
+  sendAmmo(p) { this.emitTo(p, 'ammo', p.ammo.slice()); }
+
   onLateJoin(p) { this.startQuiz(p, this.freq.burst, 'burst'); }
   onRejoin(p) { this.startQuiz(p, 1, 'revive'); }
 
@@ -174,11 +155,15 @@ class ArenaSession extends Session {
       retry = true;
     }
     const reward = gained.map((g, i) => (g > 0 ? `+${g} ${SPELLS[i].icon}` : null)).filter(Boolean).join('  ');
+    this.sendAmmo(p);
     return { reward, retry, extra: { ammo: p.ammo.slice() } };
   }
 
   onQuizDone(p) {
     this.spawn(p);
+    p.tp++;                 // « téléportation » : le navigateur reprend la position du serveur
+    p.lastPosAt = Date.now();
+    p.moveBudget = SPEED * 0.6 + 20;
     p.hp = MAX_HP;
     p.state = 'arena';
     p.frozenUntil = 0;
@@ -189,9 +174,37 @@ class ArenaSession extends Session {
 
   // ----- actions du client --------------------------------------------------
   onAction(p, type, data) {
-    if (type === 'input') this.setInput(p, data.keys);
-    else if (type === 'cast') this.cast(p, data.slot, data.aim);
+    if (type === 'pos') this.setPos(p, data);
+    else if (type === 'input') this.setInput(p, data.keys);
+    else if (type === 'cast') this.cast(p, data.slot, data.aim, data.shot);
     else if (type === 'reload' && p.state === 'arena') this.startQuiz(p, 1, 'reload');
+  }
+
+  /**
+   * Le navigateur calcule lui-même le déplacement de son joueur (réactivité immédiate)
+   * et envoie sa position ; le serveur la vérifie : vitesse max, obstacles, bords.
+   */
+  setPos(p, d) {
+    const now = Date.now();
+    if (p.state !== 'arena' || now < p.frozenUntil) return;
+    if (Number(d.tp) !== p.tp || !Number.isFinite(d.x) || !Number.isFinite(d.y)) return;
+    // « budget » de déplacement : tolère les paquets réseau groupés sans permettre d'aller plus vite
+    const elapsed = Math.min(1, (now - (p.lastPosAt || now)) / 1000);
+    p.lastPosAt = now;
+    p.moveBudget = Math.min(SPEED * 0.6 + 20, (p.moveBudget || 0) + SPEED * elapsed * 1.25);
+    let dx = d.x - p.x, dy = d.y - p.y;
+    const dist = Math.hypot(dx, dy);
+    const max = Math.min(dist, p.moveBudget);
+    if (dist > max) { dx *= max / dist; dy *= max / dist; }
+    p.moveBudget -= max;
+    p.x += dx;
+    p.y += dy;
+    Phys.settle(p, PLAYER_R, MAP);
+    if (Number.isFinite(d.dx) && Number.isFinite(d.dy) && (d.dx || d.dy)) {
+      const l = Math.hypot(d.dx, d.dy);
+      p.dirX = d.dx / l; p.dirY = d.dy / l;
+    }
+    p.input = NO_INPUT();
   }
 
   setInput(p, keys) {
@@ -204,7 +217,7 @@ class ArenaSession extends Session {
     for (let tries = 0; tries < 25; tries++) {
       const x = 60 + Math.random() * (MAP.w - 120);
       const y = 60 + Math.random() * (MAP.h - 120);
-      if (MAP.obstacles.some(o => circleHitsRect(x, y, PLAYER_R + 10, o))) continue;
+      if (MAP.obstacles.some(o => Phys.circleHitsRect(x, y, PLAYER_R + 10, o))) continue;
       let minD = Infinity;
       for (const o of this.players.values()) {
         if (o === p || o.state !== 'arena') continue;
@@ -218,13 +231,15 @@ class ArenaSession extends Session {
     p.y = best.y;
   }
 
-  cast(p, slot, aim) {
+  cast(p, slot, aim, shot) {
     const now = Date.now();
-    if (p.state !== 'arena' || now < p.frozenUntil) return;
+    const fail = () => { if (shot) this.emitTo(p, 'castfail', { shot }); };
+    if (p.state !== 'arena' || now < p.frozenUntil) return fail();
     slot = Number(slot);
-    if (!Number.isInteger(slot) || slot < 0 || slot >= SPELLS.length) return;
+    if (!Number.isInteger(slot) || slot < 0 || slot >= SPELLS.length) return fail();
     const s = SPELLS[slot];
-    if (p.ammo[slot] <= 0 || now - p.lastCast < s.cd) return;
+    // petite tolérance sur le temps de recharge (gigue réseau)
+    if (p.ammo[slot] <= 0 || now - p.lastCast[slot] < s.cd - 60) { fail(); this.sendAmmo(p); return; }
 
     let dx = p.dirX, dy = p.dirY;
     if (aim && Number.isFinite(aim.x) && Number.isFinite(aim.y)) {
@@ -234,17 +249,25 @@ class ArenaSession extends Session {
     }
 
     p.ammo[slot]--;
-    p.lastCast = now;
+    p.lastCast[slot] = now;
+    this.sendAmmo(p);
     p.invulnUntil = 0; // attaquer annule la protection d'apparition
 
     if (s.kind === 'proj') {
-      this.projectiles.push({
-        owner: p.token, spell: slot,
+      const pr = {
+        id: this.nextProjId = (this.nextProjId || 0) + 1,
+        owner: p.token, ownerId: p.id, spell: slot,
         x: p.x + dx * (PLAYER_R + s.r + 2), y: p.y + dy * (PLAYER_R + s.r + 2),
         vx: dx * s.speed, vy: dy * s.speed, born: now,
+      };
+      this.projectiles.push(pr);
+      // le navigateur anime lui-même le projectile à 60 images/s à partir de ce départ
+      this.emitAll('proj', {
+        id: pr.id, o: p.id, s: slot, sh: shot || 0,
+        x: Math.round(pr.x), y: Math.round(pr.y), vx: Math.round(pr.vx), vy: Math.round(pr.vy),
       });
     } else if (s.kind === 'nova') {
-      this.emitAll('fx', { t: 'nova', x: Math.round(p.x), y: Math.round(p.y), r: s.r, c: s.color });
+      this.emitAll('fx', { t: 'nova', x: Math.round(p.x), y: Math.round(p.y), r: s.r, c: s.color, o: p.id });
       for (const o of this.players.values()) {
         if (o === p || o.state !== 'arena') continue;
         if (Math.hypot(o.x - p.x, o.y - p.y) <= s.r + PLAYER_R) {
@@ -260,6 +283,7 @@ class ArenaSession extends Session {
     const now = Date.now();
     if (target.state !== 'arena' || now < target.invulnUntil) return;
     target.hp -= amount;
+    this.emitAll('dmg', { v: target.id, a: attacker ? attacker.id : 0, n: amount, x: Math.round(target.x), y: Math.round(target.y) });
     if (target.hp > 0) return;
     target.hp = 0;
     target.state = 'stunned';
@@ -283,6 +307,10 @@ class ArenaSession extends Session {
     }
   }
 
+  removeProj(pr, hit) {
+    this.emitAll('projx', { id: pr.id, x: Math.round(pr.x), y: Math.round(pr.y), h: hit ? 1 : 0 });
+  }
+
   // ----- boucle --------------------------------------------------------------
   update(now, dt) {
     // vague de questions pour tout le monde
@@ -299,20 +327,8 @@ class ArenaSession extends Session {
       if (p.state === 'stunned') {
         if (now >= p.stunUntil) this.startQuiz(p, 1, 'revive');
       } else if (p.state === 'arena') {
-        if (now >= p.frozenUntil) {
-          let vx = (p.input.r ? 1 : 0) - (p.input.l ? 1 : 0);
-          let vy = (p.input.d ? 1 : 0) - (p.input.u ? 1 : 0);
-          if (vx || vy) {
-            const d = Math.hypot(vx, vy);
-            vx /= d; vy /= d;
-            p.dirX = vx; p.dirY = vy;
-            p.x += vx * SPEED * dt;
-            p.y += vy * SPEED * dt;
-            for (const o of MAP.obstacles) resolveCircleRect(p, PLAYER_R, o);
-            p.x = clamp(p.x, PLAYER_R, MAP.w - PLAYER_R);
-            p.y = clamp(p.y, PLAYER_R, MAP.h - PLAYER_R);
-          }
-        }
+        // déplacement aux touches (utilisé par les robots de test ; les navigateurs envoient leur position)
+        if (now >= p.frozenUntil) Phys.step(p, p.input, SPEED, dt, PLAYER_R, MAP);
         // plus de munitions → retour aux questions
         if (p.ammo.every(a => a <= 0)) {
           if (!p.emptySince) p.emptySince = now;
@@ -328,8 +344,7 @@ class ArenaSession extends Session {
       pr.x += pr.vx * dt;
       pr.y += pr.vy * dt;
       const owner = this.players.get(pr.owner) || null;
-      let dead = now - pr.born > PROJ_LIFE_MS || pr.x < 0 || pr.y < 0 || pr.x > MAP.w || pr.y > MAP.h;
-      if (!dead && MAP.obstacles.some(o => circleHitsRect(pr.x, pr.y, s.r, o))) dead = true;
+      let dead = now - pr.born > PROJ_LIFE_MS || Phys.projBlocked(pr.x, pr.y, s.r, MAP);
       let hit = null;
       if (!dead) {
         for (const o of this.players.values()) {
@@ -338,13 +353,13 @@ class ArenaSession extends Session {
         }
         if (hit) {
           dead = true;
-          if (now >= hit.invulnUntil) {
-            this.damage(hit, s.dmg, owner);
-            if (!s.splash) this.emitAll('fx', { t: 'hit', x: Math.round(pr.x), y: Math.round(pr.y), c: s.color });
-          }
+          if (now >= hit.invulnUntil) this.damage(hit, s.dmg, owner);
         }
       }
-      if (dead) { if (s.splash) this.explode(pr, s, owner, hit); } else alive.push(pr);
+      if (dead) {
+        this.removeProj(pr, !!hit);
+        if (s.splash) this.explode(pr, s, owner, hit);
+      } else alive.push(pr);
     }
     this.projectiles = alive;
 
@@ -362,15 +377,10 @@ class ArenaSession extends Session {
         s: { quiz: 'q', arena: 'a', stunned: 's', away: 'w', lobby: 'l' }[p.state],
         f: now < p.frozenUntil ? 1 : 0,
         v: now < p.invulnUntil ? 1 : 0,
-        am: p.ammo,
+        t: p.tp,
       });
     }
-    this.emitAll('state', {
-      tl: Math.max(0, this.endAt - now),
-      nq: Math.max(0, this.nextBurstAt - now),
-      ps,
-      pr: this.projectiles.map(pr => [Math.round(pr.x), Math.round(pr.y), pr.spell]),
-    });
+    this.emitAll('state', { ps });
   }
 }
 
