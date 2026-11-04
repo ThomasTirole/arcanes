@@ -78,6 +78,9 @@ Les plus récentes en haut.
   grille de tuiles (herbe, routes en croix), maisons, fermes, halles, tours, donjons, statue, bosquets,
   rochers ; collisions calculées depuis la zone visible de chaque image (`modes/arena/maps.js`). Carte
   agrandie (2016 × 1248, tuiles de 96). Seules les images utilisées sont copiées dans le projet.
+- v0.4.1 : à la demande de Tirtho, carte par défaut = **« Cour du château »** : disposition du tout premier
+  prototype (4 murs, bloc central, 2 piliers, 2 petits blocs) habillée uniquement avec le pack Kenney
+  (murailles, forteresse avec porte, tours, maisons, route). Le village reste disponible comme 2ᵉ carte.
 - Décision FPS : **les deux modes (PvP et coop)** dans un seul jeu, choisis par un réglage au lancement.
 
 **Reste ouvert**

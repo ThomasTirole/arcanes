@@ -52,7 +52,8 @@ Le temps réel passe par Socket.io (WebSocket, avec repli automatique en long-po
 ## Le jeu « Arène »
 
 1. Vague de questions plein écran (QCM ou choix multiples) → chaque réponse remplit les munitions.
-2. Arène : **village médiéval** vu du dessus (maisons, halles, tours, bosquets, rochers pour se cacher),
+2. Arène : **cour du château** vue du dessus (murailles, forteresse centrale, tours, maisons — disposition du
+   premier prototype ; une carte « village médiéval » est aussi prête dans `maps.js`),
    caméra qui suit le joueur + mini-carte. À 0 PV, le joueur est **étourdi** (stun).
 3. Étourdi → 1 question pour revenir. Plus de munitions → 2 questions pour recharger. `R` = recharger volontairement.
 4. Toutes les 45–75 s, nouvelle vague pour tout le monde (compteur « Prochain quiz »).

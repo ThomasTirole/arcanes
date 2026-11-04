@@ -13,7 +13,7 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 - [ ] **[idée]** Retenter un vrai déploiement automatique plus tard (API Infomaniak, ou demander au support pourquoi le SSH depuis GitHub est refusé)
 - [ ] Tester l'Arène en vraie classe (réseau de l'école, 20+ élèves) et régler l'équilibrage
       (dégâts, munitions, rythme des vagues)
-- [x] **[fait]** Carte « village médiéval » avec le pack Kenney Medieval RTS (session 4) — à enrichir (plus de variété, autres cartes)
+- [x] **[fait]** Cartes avec le pack Kenney Medieval RTS : « Cour du château » (murailles) et « Village médiéval » (session 4)
 - [ ] **Sons** : lancer de sort, impact, stun, bonne / mauvaise réponse (avec bouton couper le son)
 
 ## Nouveaux jeux
@@ -39,7 +39,7 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 - [ ] **Carte plus grande, ou qui s'agrandit selon le nombre de joueurs** (évite l'entassement à 25)
 - [ ] **Spectateur qui suit un joueur** : le prof clique sur un élève dans le classement en direct et la
       caméra le suit (retour à la vue d'ensemble d'un clic)
-- [ ] Cartes multiples (forêt, hiver avec les tuiles de neige du pack, château…) + choix de la carte par le prof
+- [ ] Choix de la carte par le prof au lancement (château / village prêts) + autres cartes (hiver, désert avec les tuiles du pack)
 - [ ] **[idée]** Personnages : utiliser les petits soldats du pack Kenney (4 couleurs) à la place des mages ?
 - [x] **[fait]** Plus aucun emoji dans l'appli : icônes SVG maison (session 4)
 - [ ] **[idée]** Cartes créées par les élèves (comme WayArena) avec leur nom en filigrane

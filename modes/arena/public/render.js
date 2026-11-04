@@ -171,15 +171,11 @@
         if (im) g.drawImage(im, d.x - T * 0.35, d.y - T * 0.5, T * 0.7, T * 0.7);
       }
       // objets du haut vers le bas, avec une ombre au sol
-      for (const o of [...map.objects].sort((a, b) => a.r - b.r)) {
+      for (const o of [...map.objects].sort((a, b) => (a.r + (a.s || 1)) - (b.r + (b.s || 1)))) {
         const im = imgs[o.img];
         if (!im) continue;
-        const x = o.c * T, y = o.r * T;
-        if (!o.img.startsWith('tile_')) {
-          g.fillStyle = 'rgba(0,0,0,0.22)';
-          g.beginPath(); g.ellipse(x + T * 0.52, y + T * 0.9, T * 0.36, T * 0.12, 0, 0, TAU); g.fill();
-        }
-        g.drawImage(im, x, y, T, T);
+        const k = T * (o.s || 1), x = o.c * T, y = o.r * T;
+        g.drawImage(im, x, y, k, k);
       }
       // léger assombrissement des bords
       const cx = map.w / 2, cy = map.h / 2;
