@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arcanes — Espace prof</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .page { width: min(1000px, 100%); margin: 0 auto; padding: 28px 16px 60px; }
+    .page.screen { justify-content: flex-start; align-items: stretch; }
+    .topline { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .topline h1 { margin: 0; font-size: 32px; }
+    .quizlist { display: flex; flex-direction: column; gap: 10px; }
+    .quizitem { display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; flex-wrap: wrap; }
+    .quizitem .t { font-weight: 600; font-size: 19px; }
+    .qcard { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+    .qcard .qn { font-weight: 700; color: var(--accent); }
+    .chrow { display: flex; gap: 8px; align-items: center; }
+    .chrow input[type=text] { padding: 9px 12px; }
+    .chrow label { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 14px; white-space: nowrap; cursor: pointer; }
+    .chrow input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--good); }
+    .stickybar { position: sticky; bottom: 0; background: linear-gradient(transparent, var(--bg) 35%); padding: 24px 0 12px; display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap; }
+    .code-big { font-size: 84px; font-weight: 700; letter-spacing: 10px; color: #fde68a; line-height: 1; }
+    .settings { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 640px) { .settings { grid-template-columns: 1fr; } .code-big { font-size: 56px; } }
+    .switch { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+    .switch input { width: 22px; height: 22px; accent-color: var(--accent); }
+    .modelist { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+    .modecard { text-align: left; background: var(--bg2); border: 2px solid var(--line); border-radius: 14px; padding: 14px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
+    .modecard:hover { border-color: var(--accent); }
+    .modecard.selected { border-color: #fde68a; box-shadow: 0 0 0 3px rgba(253,230,138,.2); }
+    .modecard .mt { font-size: 20px; font-weight: 700; }
+    .modecard .md { color: var(--muted); font-size: 14px; }
+
+    #live { position: fixed; inset: 0; display: flex; flex-direction: column; }
+    .livebar { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: rgba(18,13,36,.95); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+    .livebody { flex: 1; display: flex; min-height: 0; }
+    .livebody .arenawrap { flex: 1; position: relative; min-width: 0; }
+    .side { width: 300px; border-left: 1px solid var(--line); background: rgba(18,13,36,.9); overflow-y: auto; padding: 12px; }
+    .side h3 { margin: 4px 0 10px; font-size: 16px; color: var(--muted); }
+    .liverow { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-bottom: 1px solid var(--line); font-size: 15px; }
+    .liverow .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .liverow .st { font-size: 12px; color: var(--muted); width: 18px; text-align: center; }
+    .liverow b { font-variant-numeric: tabular-nums; }
+    #live .feed { top: 12px; }
+    @media (max-width: 800px) { .side { display: none; } }
+
+    .qreport { display: flex; flex-direction: column; gap: 8px; }
+    .qrep { display: grid; grid-template-columns: 1fr 160px 60px; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+    .qrep .pc { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .stat { background: var(--card2); border: 1px solid var(--line); border-radius: 14px; padding: 14px 18px; flex: 1; min-width: 200px; }
+    .stat .lbl { color: var(--muted); font-size: 14px; }
+    .stat .val { font-size: 30px; font-weight: 700; }
+  </style>
+</head>
+<body>
+
+<!-- Connexion -->
+<section id="login" class="screen">
+  <h1 class="logo">Arcanes</h1>
+  <p class="tagline">Espace enseignant</p>
+  <form id="loginForm" class="card stack" style="width:min(360px,100%)">
+    <label class="field">Mot de passe
+      <input id="pwInput" type="password" autocomplete="current-password" required>
+    </label>
+    <button class="btn primary" type="submit">Entrer</button>
+    <div id="loginError" class="error"></div>
+  </form>
+</section>
+
+<!-- Liste des quiz -->
+<section id="dash" class="screen page hidden">
+  <div class="topline">
+    <h1>Mes quiz</h1>
+    <div class="row">
+      <label class="btn">Importer JSON<input id="importNew" type="file" accept=".json,application/json" hidden></label>
+      <button class="btn primary" id="newQuiz">+ Nouveau quiz</button>
+    </div>
+  </div>
+  <div id="quizList" class="quizlist"></div>
+  <div id="dashError" class="error" style="margin-top:12px"></div>
+</section>
+
+<!-- Éditeur -->
+<section id="editor" class="screen page hidden">
+  <div class="topline">
+    <h1 id="editorHeading">Nouveau quiz</h1>
+    <div class="row">
+      <label class="btn small">Importer des questions<input id="importInto" type="file" accept=".json,application/json" hidden></label>
+      <button class="btn small" id="exportQuiz">Exporter JSON</button>
+    </div>
+  </div>
+  <label class="field" style="margin-bottom:16px">Titre du quiz
+    <input id="quizTitleInput" type="text" maxlength="100" placeholder="Ex. Excel — références et fonctions">
+  </label>
+  <div id="questionList" class="stack"></div>
+  <button class="btn" id="addQuestion" style="margin-top:14px;align-self:flex-start">+ Ajouter une question</button>
+  <div class="stickybar">
+    <div id="editorError" class="error grow" style="align-self:center"></div>
+    <button class="btn" id="cancelEdit">Retour</button>
+    <button class="btn primary" id="saveQuiz">Enregistrer</button>
+  </div>
+</section>
+
+<!-- Réglages de la partie -->
+<section id="launch" class="screen page hidden">
+  <div class="topline"><h1>Lancer une partie</h1></div>
+  <div class="card stack">
+    <div class="muted">Quiz : <b id="launchQuizTitle" style="color:var(--text)"></b></div>
+    <div style="font-weight:700;margin-top:6px">Jeu</div>
+    <div id="modeList" class="modelist"></div>
+    <div style="font-weight:700;margin-top:6px">Réglages</div>
+    <div class="settings" id="settingsBox"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:8px">
+      <button class="btn" id="launchCancel">Retour</button>
+      <button class="btn primary" id="launchGo">Créer la partie</button>
+    </div>
+    <div id="launchError" class="error"></div>
+  </div>
+</section>
+
+<!-- Salle d'attente -->
+<section id="hlobby" class="screen hidden">
+  <div class="muted" style="font-size:20px">Rejoignez sur <b id="joinUrl" style="color:var(--text)"></b> avec le code</div>
+  <div class="code-big" id="bigCode">000000</div>
+  <div class="muted" id="hlobbyQuiz" style="margin:10px 0 20px"></div>
+  <div class="card" style="width:min(900px,100%)">
+    <div class="row" style="justify-content:space-between;margin-bottom:12px">
+      <div style="font-weight:700;font-size:20px"><span id="playerCount">0</span> joueur(s)</div>
+      <div class="muted" style="font-size:14px">Clique sur un pseudo pour retirer l'élève</div>
+    </div>
+    <div id="hlobbyPlayers" class="chips"></div>
+  </div>
+  <div class="row" style="margin-top:20px">
+    <button class="btn" id="lobbyClose">Annuler la partie</button>
+    <button class="btn primary big" id="startGame" disabled>Démarrer</button>
+  </div>
+  <div id="hlobbyError" class="error"></div>
+</section>
+
+<!-- Partie en cours (spectateur) -->
+<section id="live" class="hidden">
+  <div class="livebar">
+    <div class="pill">⏱ <b id="liveTimer">0:00</b></div>
+    <button class="btn small" id="addMinute">+1 min</button>
+    <div class="pill" id="liveNextPill">❓ Prochain quiz <b id="liveNext">0:00</b></div>
+    <div class="pill">Code <b id="liveCode"></b></div>
+    <div class="grow"></div>
+    <button class="btn small danger" id="endGame">Terminer</button>
+  </div>
+  <div class="livebody">
+    <div class="arenawrap" id="spectatorRoot"></div>
+    <div class="side">
+      <h3>Classement en direct</h3>
+      <div id="liveBoard"></div>
+    </div>
+  </div>
+</section>
+
+<!-- Résultats -->
+<section id="results" class="screen page hidden">
+  <div class="topline">
+    <h1>Résultats</h1>
+    <div class="row">
+      <button class="btn" id="exportCsv">Exporter CSV</button>
+      <button class="btn" id="resClose">Nouvelle partie</button>
+      <button class="btn primary" id="replay">Rejouer avec la même classe</button>
+    </div>
+  </div>
+  <div class="muted" id="resQuiz"></div>
+  <div id="resPodium" class="podium"></div>
+  <div class="row" style="margin-bottom:16px">
+    <div class="stat">
+      <div class="lbl">Précision de la classe</div>
+      <div class="val" id="resAcc">0%</div>
+      <div class="accbar"><i id="resAccBar" style="width:0%"></i></div>
+      <div class="muted" id="resAccMsg" style="font-size:14px;margin-top:6px"></div>
+    </div>
+    <div class="stat">
+      <div class="lbl">👑 Meilleure précision</div>
+      <div class="val" id="resBest">—</div>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:16px"><table class="board" id="resTable"></table></div>
+  <div class="card">
+    <div style="font-weight:700;font-size:20px;margin-bottom:4px">Rapport par question</div>
+    <div class="muted" style="font-size:14px;margin-bottom:10px">Triées de la plus ratée à la mieux réussie — de quoi savoir quoi reprendre.</div>
+    <div id="resQuestions" class="qreport"></div>
+  </div>
+</section>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/common.js"></script>
+<script src="/js/prof.js"></script>
+</body>
+</html>
