@@ -75,14 +75,5 @@ jobs:
           USER_: ${{ secrets.IK_SSH_USER }}
           DEST: ${{ secrets.IK_PATH }}
         run: |
-          sshpass -e ssh -o StrictHostKeyChecking=accept-new "$USER_@$HOST" bash -l <<EOF
-          set -e
-          cd '$DEST'
-          if command -v npm > /dev/null; then
-            npm install --omit=dev --no-audit --no-fund
-          else
-            echo "npm introuvable en SSH : lance « Build » depuis le Manager si les dépendances ont changé."
-          fi
-          date > .restart
-          echo "Déploiement terminé, le serveur redémarre dès qu'aucune partie n'est en cours."
-          EOF
+          # (pas de « heredoc » : sshpass ne transmet pas l'entrée standard de façon fiable)
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new "$USER_@$HOST" "sh '$DEST/scripts/remote-deploy.sh'"

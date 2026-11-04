@@ -129,6 +129,7 @@ public/               pages communes : élève (index.html), prof (prof.html), f
 test/                 unit.js (correction, import) et simulation.js (partie complète) — npm test
 docs/                 JOURNAL.md (journal de travail), ROADMAP.md (idées et prochaines étapes)
 .github/workflows/    deploy.yml (déploiement automatique sur Infomaniak)
+scripts/              remote-deploy.sh (lancé sur le serveur après l'envoi : npm install + redémarrage)
 ```
 
 ## Ajouter un jeu

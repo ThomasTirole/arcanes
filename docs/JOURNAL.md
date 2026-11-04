@@ -45,9 +45,13 @@ Les plus récentes en haut.
 - Tests : `test/unit.js` (correction multi-réponses, statistiques, import Wayground) + simulation mise à jour.
 - Documentation : README, ce journal, `docs/ROADMAP.md`, `CLAUDE.md` (règles de suivi du projet).
 
+- Premier déploiement auto : l'envoi des fichiers marche, mais l'étape distante échouait (code 255) —
+  `sshpass` + commande passée par l'entrée standard (« heredoc ») ne fonctionne pas. Remplacé par un script
+  `scripts/remote-deploy.sh` envoyé avec le code et lancé par une simple commande SSH (cherche aussi npm
+  dans les profils du shell, n'échoue pas si npm est absent).
+
 **Reste ouvert**
-- Créer les 4 secrets GitHub, puis vérifier le premier déploiement automatique (npm disponible en SSH ?
-  redémarrage effectif ?).
+- Vérifier que le redémarrage automatique est effectif (Infomaniak relance-t-il le processus ?).
 - Tester la fluidité en vraie classe (réseau de l'école, 20+ élèves).
 
 ---
