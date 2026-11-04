@@ -96,6 +96,7 @@ Les plus récentes en haut.
 - Décision FPS : **les deux modes (PvP et coop)** dans un seul jeu, choisis par un réglage au lancement.
 
 **Reste ouvert**
+- FPS : le double saut propulse trop vers l'avant (accélération non voulue) — à corriger à la prochaine session.
 - La version qui tournait avant ne connaît pas `.restart` : la première fois, relancer l'application à la
   main depuis le Manager. Ensuite, vérifier sur quelques déploiements que la relance auto est fiable.
 - Tester la fluidité en vraie classe (réseau de l'école, 20+ élèves).

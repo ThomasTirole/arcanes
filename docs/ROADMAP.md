@@ -28,6 +28,7 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
   - visée souris + mode clavier seul (les flèches tournent la caméra) pour les élèves sans souris
   - [x] **[fait]** prototype solo `/proto/fps/` (session 4) — à tester sur les PC de l'école
   - [x] **[fait]** double saut, saut mural, glissade + glissade-saut, coup de poing + parade, compteur de style (session 4)
+  - [ ] **À corriger : le double saut propulse trop vers l'avant** (grosse accélération non voulue) — signalé par Tirtho, pas encore corrigé
   - [ ] **Assets à trouver et définir** : thème (robots / magie / médiéval ?), armes 3D, ennemis, décor
         (pistes CC0 : packs 3D Kenney, Quaternius)
   - [ ] **[idée]** plus d'idées Ultrakill : pièce à lancer et à toucher pour un tir rebond, grappin,
