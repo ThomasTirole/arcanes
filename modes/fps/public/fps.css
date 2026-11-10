@@ -9,3 +9,6 @@
 .fps-bar { height: 18px; background: rgba(255,255,255,.08); border-radius: 9px; overflow: hidden; }
 .fps-bar i { display: block; height: 100%; border-radius: 9px; transition: width .4s; }
 .fps-num { text-align: right; font-variant-numeric: tabular-nums; }
+/* PvP : carte de l'arène vue du dessus */
+.fps-pvp { position: absolute; inset: 0; }
+.fps-map { width: 100%; height: 100%; display: block; }

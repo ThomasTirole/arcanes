@@ -6,6 +6,7 @@ import * as THREE from './vendor/three.module.min.js';
 // ?embed=1 : intégré dans une partie Arcanes (munitions données par les questions, échanges avec la page parente)
 const EMBED = new URLSearchParams(location.search).has('embed');
 const toParent = msg => { if (EMBED) window.parent.postMessage({ arcanesFps: true, ...msg }, location.origin); };
+const PVP = EMBED && new URLSearchParams(location.search).get('mode') === 'pvp';   // chacun pour soi entre élèves
 let embedPaused = EMBED;     // en partie : pause tant que la page parente ne donne pas le départ
 
 // ------------------------------------------------------------------ réglages du jeu
@@ -457,6 +458,10 @@ function punch(now) {
       hitSomething = true;
     }
   }
+  if (PVP) {
+    const t = remoteInFront(origin, dir, P.punchRange + 0.5, 0.55);
+    if (t) { toParent({ t: 'punch', id: t.id }); burst(t.center(), 0xe5e7eb, 6, 5); hitSomething = true; }
+  }
   if (hitSomething) { shake(0.15); p.kick -= 0.02; }
 }
 
@@ -563,9 +568,17 @@ function fire(now) {
       const headHit = closest.distanceTo(head) < e.headR;
       if (closest.distanceTo(tmpV) < e.r || headHit) { hit = { e, head: headHit }; hitD = t; }
     }
+    let rhit = null;
+    if (PVP) {
+      rhit = rayRemote(origin, dir, hitD);
+      if (rhit) hitD = rhit.d;
+    }
     const end = origin.clone().addScaledVector(dir, hitD);
     tracer(muzzle, end, 0xfde68a);
-    if (hit) {
+    if (PVP) toParent({ t: 'shoot', hit: rhit ? rhit.id : 0, head: rhit ? rhit.head : false, e: [end.x, end.y, end.z].map(v => +v.toFixed(2)) });
+    if (rhit) {
+      burst(end, rhit.head ? 0xfde047 : 0xe5e7eb, rhit.head ? 10 : 6, 5);
+    } else if (hit) {
       damageEnemy(hit.e, hit.head ? w.dmg * 2 : w.dmg, end, hit.head);
     } else if (wallD < 120) burst(end, 0xfde68a, 6, 4);
   } else {
@@ -573,11 +586,14 @@ function fire(now) {
     const m = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffa94d }));
     m.position.copy(muzzle);
     scene.add(m);
-    rockets.push({ mesh: m, vel: dir.clone().multiplyScalar(w.speed), born: now, trail: 0 });
+    const k = ++rocketSeq;
+    rockets.push({ mesh: m, vel: dir.clone().multiplyScalar(w.speed), born: now, trail: 0, k });
+    if (PVP) toParent({ t: 'rocket', k, o: [muzzle.x, muzzle.y, muzzle.z].map(v => +v.toFixed(2)), d: [dir.x, dir.y, dir.z].map(v => +v.toFixed(3)) });
   }
 }
+let rocketSeq = 0;
 
-function explode(pos, radius, dmg) {
+function explode(pos, radius, dmg, rocket) {
   burst(pos, 0xf97316, 30, 12);
   burst(pos, 0xfde68a, 14, 7);
   ring(pos, radius, 0xf97316);
@@ -591,7 +607,18 @@ function explode(pos, radius, dmg) {
     player.vel.addScaledVector(push, f);
     if (push.y > 0.3) player.vel.y = Math.max(player.vel.y, f * 0.9);
     player.onGround = false;
-    hurtPlayer(Math.round((1 - d / radius) * 12), false);
+    if (!PVP) hurtPlayer(Math.round((1 - d / radius) * 12), false);
+  }
+  if (PVP && rocket) {
+    // le serveur vérifie et applique les dégâts
+    const hits = [];
+    for (const r of remotes.values()) {
+      if (!r.visible) continue;
+      const de = r.center().distanceTo(pos);
+      if (de < radius + 0.5) hits.push({ id: r.id, dmg: Math.round(dmg * (1 - Math.min(1, de / (radius + 0.5)) * 0.6)) });
+    }
+    if (hits.length) hitMarker(false);
+    toParent({ t: 'boom', k: rocket.k, p: [pos.x, pos.y, pos.z].map(v => +v.toFixed(2)), hits });
   }
   for (const e of enemies) {
     if (!e.alive) continue;
@@ -611,9 +638,17 @@ function updateRockets(dt, now) {
     for (const e of enemies) {
       if (e.alive && r.mesh.position.distanceTo(e.mesh.position.clone().add(e.center)) < e.r + 0.3) { hitEnemy = true; break; }
     }
-    if (wallD < len || hitEnemy || now - r.born > 4000) {
+    if (PVP && !r.remote) for (const o of remotes.values()) {
+      if (o.visible && r.mesh.position.distanceTo(o.center()) < 0.8) { hitEnemy = true; break; }
+    }
+    if (r.remote && (wallD < len || now - r.born > 4000)) {
+      // roquette d'un autre joueur : l'explosion visible arrive avec le message du serveur
+      scene.remove(r.mesh); r.mesh.geometry.dispose(); rockets.splice(i, 1);
+      continue;
+    }
+    if (!r.remote && (wallD < len || hitEnemy || now - r.born > 4000)) {
       r.mesh.position.addScaledVector(dir, Math.min(wallD, len));
-      explode(r.mesh.position.clone(), WEAPONS[1].splash, WEAPONS[1].dmg);
+      explode(r.mesh.position.clone(), WEAPONS[1].splash, WEAPONS[1].dmg, r);
       scene.remove(r.mesh); r.mesh.geometry.dispose();
       rockets.splice(i, 1);
       continue;
@@ -778,6 +813,9 @@ function updateEnemyShots(dt, now) {
 // onde de choc du piqué au sol
 function slamWave() {
   ring(player.pos.clone(), 4.5, 0xc4b5fd);
+  if (PVP) {
+    for (const r of remotes.values()) if (r.visible && r.pos.distanceTo(player.pos) < 4.5) toParent({ t: 'punch', id: r.id, slam: true });
+  }
   for (const e of enemies) {
     if (!e.alive) continue;
     const d = e.mesh.position.distanceTo(player.pos);
@@ -809,10 +847,11 @@ function restart() {
   Object.assign(player, { hp: 100, alive: true, dash: P.dashCharges, slamming: false, sliding: false, airJumps: 1, wallJumps: P.wallJumps });
   style = 0; styleFeed.length = 0;
   player.pos.set(0, 2.5, 10); player.vel.set(0, 0, 0); player.yaw = 0; player.pitch = 0;
+  if (PVP && lastSpawn) { player.pos.set(lastSpawn.x, lastSpawn.y + 0.5, lastSpawn.z); player.yaw = lastSpawn.yaw || 0; }
   wave = 0; score = 0; waveTimer = 0;
   document.getElementById('score').textContent = '0';
   hideBanner();
-  startWave();
+  if (!PVP) startWave();
 }
 
 // ------------------------------------------------------------------ effets
@@ -1051,18 +1090,238 @@ document.addEventListener('keydown', e => {
 document.addEventListener('keyup', e => { keys[e.code] = false; });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; mouseDown = false; });
 
+// ------------------------------------------------------------------ PvP : les autres joueurs
+// Le serveur envoie la position de tout le monde ~15 fois par seconde ; on affiche les autres
+// avec 110 ms de retard pour interpoler en douceur. Chacun annonce ses touches, le serveur tranche.
+const remotes = new Map();   // id → avatar
+let roster = new Map(), myId = 0, lastPosSent = 0;
+const INTERP_MS = 110;
+
+function nameSprite(text, color) {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 64;
+  const g = c.getContext('2d');
+  g.font = 'bold 34px system-ui, sans-serif';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.lineWidth = 7; g.strokeStyle = 'rgba(0,0,0,.75)'; g.strokeText(text, 128, 32);
+  g.fillStyle = color; g.fillText(text, 128, 32);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false, transparent: true }));
+  sp.scale.set(2.8, 0.7, 1);
+  sp.renderOrder = 10;
+  return sp;
+}
+
+function makeRemote(id) {
+  const info = roster.get(id) || { name: '?', color: '#a78bfa' };
+  const color = new THREE.Color(info.color);
+  const mat = new THREE.MeshLambertMaterial({ color, transparent: true, opacity: 1 });
+  const dark = new THREE.MeshLambertMaterial({ color: color.clone().multiplyScalar(0.55), transparent: true, opacity: 1 });
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.42, 1.0, 10), mat); body.position.y = 0.85; g.add(body);
+  const legs = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.4, 0.3), dark); legs.position.y = 0.2; g.add(legs);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 10), mat); head.position.y = 1.6; g.add(head);
+  const visor = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.12, 0.12), new THREE.MeshBasicMaterial({ color: 0x111827 }));
+  visor.position.set(0, 1.64, -0.24); g.add(visor);
+  const gunM = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.6), new THREE.MeshLambertMaterial({ color: 0x3f3a5a }));
+  gunM.position.set(0.38, 1.15, -0.35); g.add(gunM);
+  const label = nameSprite(info.name, info.color); label.position.y = 2.3; g.add(label);
+  scene.add(g);
+  const r = {
+    id, g, body, head, mats: [mat, dark], buf: [], visible: false, pos: new THREE.Vector3(), yaw: 0, pitch: 0, flashT: 0,
+    center() { return this.pos.clone().add(new THREE.Vector3(0, 0.9, 0)); },
+    headPos() { return this.pos.clone().add(new THREE.Vector3(0, 1.6, 0)); },
+  };
+  g.visible = false;
+  remotes.set(id, r);
+  return r;
+}
+
+function removeRemote(r) {
+  scene.remove(r.g);
+  r.g.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+  remotes.delete(r.id);
+}
+
+// angle le plus court entre deux lacets
+const lerpAngle = (a, b, k) => a + (Math.atan2(Math.sin(b - a), Math.cos(b - a))) * k;
+
+function updateRemotes(now, dt) {
+  const t = performance.now() - INTERP_MS;
+  for (const r of remotes.values()) {
+    const b = r.buf;
+    while (b.length > 2 && b[1].t <= t) b.shift();
+    if (!b.length) continue;
+    let s;
+    if (b.length > 1 && b[0].t <= t && b[1].t > t) {
+      const k = (t - b[0].t) / (b[1].t - b[0].t);
+      s = { x: b[0].x + (b[1].x - b[0].x) * k, y: b[0].y + (b[1].y - b[0].y) * k, z: b[0].z + (b[1].z - b[0].z) * k,
+        w: lerpAngle(b[0].w, b[1].w, k), sl: b[1].sl, v: b[1].v };
+    } else s = b[b.length - 1];
+    r.pos.set(s.x, s.y, s.z); r.yaw = s.w;
+    r.g.position.copy(r.pos);
+    r.g.rotation.y = r.yaw;
+    r.body.scale.y = s.sl ? 0.6 : 1;
+    r.head.position.y = s.sl ? 1.15 : 1.6;
+    // invulnérable juste après la réapparition : clignote
+    const op = s.v ? (Math.sin(now / 60) > 0 ? 0.35 : 0.8) : 1;
+    r.mats.forEach(m => { m.opacity = op; m.emissive && m.emissive.setHex(r.flashT > 0 ? 0xffffff : 0x000000); });
+    r.flashT = Math.max(0, r.flashT - dt);
+    r.g.visible = r.visible;
+  }
+}
+
+function onState(ps) {
+  const seen = new Set();
+  const t = performance.now();
+  for (const s of ps) {
+    if (s.i === myId) continue;
+    seen.add(s.i);
+    const r = remotes.get(s.i) || makeRemote(s.i);
+    if (!r.visible) r.buf.length = 0;   // réapparition : pas d'interpolation depuis l'ancienne place
+    r.visible = true;
+    r.buf.push({ t, x: s.x, y: s.y, z: s.z, w: s.w, sl: s.sl, v: s.v });
+    if (r.buf.length > 12) r.buf.shift();
+  }
+  // les joueurs absents du message sont en train de répondre aux questions : on les cache
+  for (const r of remotes.values()) if (!seen.has(r.id)) { r.visible = false; r.g.visible = false; }
+  document.getElementById('wave').textContent = String(seen.size + (player.alive && started && !embedPaused ? 1 : 0));
+}
+
+// rayon contre les avatars : corps (cylindre approché par segment) + tête
+function rayRemote(origin, dir, maxD) {
+  let best = null;
+  const seg = (a, b, rad) => {
+    // distance minimale entre le rayon et le segment [a,b]
+    let bestT = null;
+    for (let i = 0; i <= 6; i++) {
+      const pt = a.clone().lerp(b, i / 6);
+      const tt = pt.clone().sub(origin).dot(dir);
+      if (tt < 0 || tt > maxD) continue;
+      if (origin.clone().addScaledVector(dir, tt).distanceTo(pt) < rad && (bestT === null || tt < bestT)) bestT = tt;
+    }
+    return bestT;
+  };
+  for (const r of remotes.values()) {
+    if (!r.visible) continue;
+    const hp = r.headPos();
+    const th = hp.clone().sub(origin).dot(dir);
+    const headHit = th > 0 && th < maxD && origin.clone().addScaledVector(dir, th).distanceTo(hp) < 0.34;
+    const tb = seg(r.pos.clone().setY(r.pos.y + 0.2), r.pos.clone().setY(r.pos.y + 1.3), 0.45);
+    const d = headHit ? th : tb;
+    if (d !== null && d !== undefined && (!best || d < best.d)) best = { id: r.id, head: headHit, d };
+  }
+  return best;
+}
+
+function remoteInFront(origin, dir, range, cos) {
+  let best = null, bestD = Infinity;
+  for (const r of remotes.values()) {
+    if (!r.visible) continue;
+    const to = r.center().sub(origin);
+    const d = to.length();
+    if (d < range && to.normalize().dot(dir) > cos && d < bestD) { best = r; bestD = d; }
+  }
+  return best;
+}
+
+function sendPos(now) {
+  if (!player.alive || now - lastPosSent < 50) return;
+  lastPosSent = now;
+  toParent({ t: 'pos', x: +player.pos.x.toFixed(2), y: +player.pos.y.toFixed(2), z: +player.pos.z.toFixed(2),
+    yaw: +player.yaw.toFixed(3), pitch: +player.pitch.toFixed(2), sl: player.sliding ? 1 : 0 });
+}
+
+function remoteRocket(m) {
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffa94d }));
+  mesh.position.fromArray(m.o);
+  scene.add(mesh);
+  rockets.push({ mesh, vel: new THREE.Vector3().fromArray(m.d).normalize().multiplyScalar(WEAPONS[1].speed), born: performance.now(), trail: 0, k: m.k, owner: m.id, remote: true });
+  sfx('rocket');
+}
+
+function remoteBoom(m) {
+  const i = rockets.findIndex(r => r.remote && r.owner === m.id && r.k === m.k);
+  if (i >= 0) { scene.remove(rockets[i].mesh); rockets.splice(i, 1); }
+  const pos = new THREE.Vector3().fromArray(m.p);
+  burst(pos, 0xf97316, 30, 12);
+  burst(pos, 0xfde68a, 14, 7);
+  ring(pos, WEAPONS[1].splash, 0xf97316);
+  sfx('boom');
+  shake(Math.max(0, 0.5 - player.pos.distanceTo(pos) / 30));
+}
+
+function onPvpMessage(m) {
+  if (m.t === 'roster') {
+    myId = m.me;
+    roster = new Map(m.players.map(p => [p.id, p]));
+    for (const r of [...remotes.values()]) if (!roster.has(r.id)) removeRemote(r);
+  } else if (m.t === 'state') {
+    onState(m.ps);
+  } else if (m.t === 'shot') {
+    if (m.id === myId) return;
+    const r = remotes.get(m.id);
+    if (r && r.visible && m.e) {
+      const from = r.headPos().add(new THREE.Vector3(0.3, -0.4, 0));
+      tracer(from, new THREE.Vector3().fromArray(m.e), 0xfde68a);
+      if (r.pos.distanceTo(player.pos) < 40) sfx('shot');
+    }
+  } else if (m.t === 'rocket') {
+    if (m.id !== myId) remoteRocket(m);
+  } else if (m.t === 'boom') {
+    if (m.id !== myId) remoteBoom(m);
+  } else if (m.t === 'hit') {
+    // touché : le serveur donne les points de vie restants
+    player.hp = m.hp;
+    player.lastHurt = performance.now();
+    document.getElementById('damage').style.boxShadow = 'inset 0 0 160px rgba(220,38,38,0.7)';
+    setTimeout(() => { document.getElementById('damage').style.boxShadow = 'inset 0 0 160px rgba(220,38,38,0)'; }, 120);
+    shake(0.25);
+    if (m.push) { player.vel.add(new THREE.Vector3().fromArray(m.push)); player.onGround = false; }
+    if (m.hp <= 0 && player.alive) {
+      player.alive = false;
+      banner(m.by ? `Étourdi par ${m.by} !` : 'Étourdi !', '#f87171', 1800);
+      sfx('down');
+    }
+  } else if (m.t === 'hitconfirm') {
+    hitMarker(m.stun);
+    const r = remotes.get(m.id);
+    if (r) r.flashT = 0.08;
+    if (m.stun) {
+      addStyle(150, 'ÉTOURDI');
+      if (!player.onGround) addStyle(60, 'EN L\'AIR');
+      sfx('kill');
+      if (r) { burst(r.center(), 0xfde047, 16, 7); burst(r.center(), new THREE.Color(roster.get(r.id) ? roster.get(r.id).color : '#ffffff').getHex(), 20, 8, true); }
+    }
+  } else if (m.t === 'scored') {
+    score = m.stuns;
+    document.getElementById('score').textContent = score;
+    banner(`${m.victim} étourdi !`, '#fde047', 1200);
+  }
+}
+
 // ------------------------------------------------------------------ intégration dans une partie Arcanes
-function revive() {
+let lastSpawn = null;
+function revive(spawn) {
+  if (spawn) lastSpawn = spawn;
   for (const sh of enemyShots) scene.remove(sh.mesh);
   enemyShots.length = 0;
-  Object.assign(player, { hp: 100, alive: true, slamming: false, sliding: false });
-  player.pos.set(0, 2.5, 10); player.vel.set(0, 0, 0);
+  Object.assign(player, { hp: 100, alive: true, slamming: false, sliding: false, lastHurt: 0 });
+  if (spawn) { player.pos.set(spawn.x, spawn.y + 0.5, spawn.z); player.yaw = spawn.yaw || 0; player.pitch = 0; }
+  else player.pos.set(0, 2.5, 10);
+  player.vel.set(0, 0, 0);
   // les robots trop proches reculent un peu
   for (const e of enemies) if (e.mesh.position.distanceTo(player.pos) < 8) e.mesh.position.add(e.mesh.position.clone().sub(player.pos).setY(0).normalize().multiplyScalar(8));
   hideBanner();
 }
 if (EMBED) {
-  document.getElementById('menuText').textContent = 'Réponds aux questions pour gagner des munitions, puis étourdis un maximum de robots !';
+  document.getElementById('menuText').textContent = PVP
+    ? 'Chacun pour soi : réponds aux questions pour gagner des munitions, puis étourdis les autres joueurs !'
+    : 'Réponds aux questions pour gagner des munitions, puis étourdis un maximum de robots !';
+  if (PVP) {
+    document.querySelector('#topRight .lbl').textContent = 'En jeu';
+    document.querySelectorAll('#topRight .lbl')[1].textContent = 'Joueurs étourdis';
+    document.getElementById('wave').textContent = '1';
+  }
   document.getElementById('play').textContent = 'Jouer';
   document.getElementById('topLeft').lastChild.textContent = ' · Arcanes';
   document.getElementById('topLeft').style.top = '110px';   // laisse la place à l'horloge de la partie
@@ -1086,7 +1345,9 @@ if (EMBED) {
       if (ammo[0] > 0 || ammo[1] > 0) emptySent = false;
       updateAmmoHud();
     } else if (m.t === 'revive') {
-      revive();
+      revive(m.spawn);
+    } else if (PVP) {
+      onPvpMessage(m);
     } else if (m.t === 'reset') {
       started = false; embedPaused = true; score = 0; style = 0;
     }
@@ -1116,8 +1377,10 @@ function loop(now) {
     }
     updateGun(dt);
     updateRockets(dt, now);
-    updateEnemies(dt, now);
-    updateEnemyShots(dt, now);
+    if (!PVP) {
+      updateEnemies(dt, now);
+      updateEnemyShots(dt, now);
+    } else sendPos(now);
     updateEffects(dt);
     updateHud(dt);
   } else if (!started) {
@@ -1125,6 +1388,7 @@ function loop(now) {
     camera.position.set(Math.sin(now / 6000) * 24, 14, Math.cos(now / 6000) * 24);
     camera.lookAt(0, 2, 0);
   }
+  if (PVP) updateRemotes(now, dt);
   renderer.render(scene, camera);
   requestAnimationFrame(loop);
 }

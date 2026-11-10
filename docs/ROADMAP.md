@@ -34,8 +34,12 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
         (pistes CC0 : packs 3D Kenney, Quaternius)
   - [ ] **[idée]** plus d'idées Ultrakill : pièce à lancer et à toucher pour un tir rebond, grappin,
         arène qui change, armes alternatives (tir secondaire)
-  - étapes suivantes :
-    multijoueur PvP → vagues de monstres pour la coop
+  - [x] **[fait]** PvP « chacun pour soi » dans la même arène, réglage « Mode de jeu » au lancement,
+        serveur juge des dégâts, carte vue du dessus pour le prof (session 6)
+  - [ ] Tester le PvP en classe (20+ élèves, réseau de l'école)
+  - [ ] Coop : toute la classe contre des vagues de robots dans la même arène
+  - [ ] **[idée]** Spectateur PvP : cliquer un joueur sur la carte pour voir sa vue / le suivre
+  - [ ] **[idée]** PvP par équipes (deux couleurs) et carte plus grande selon le nombre de joueurs
   - style cartoon sans gore (robots, slime, étourdissement)
 - [ ] **[idée]** Tir à la corde par équipes (classe contre classe ou deux moitiés de classe)
 - [ ] **[idée]** Course : chaque bonne réponse fait avancer

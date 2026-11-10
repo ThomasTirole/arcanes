@@ -5,6 +5,37 @@ Les plus récentes en haut.
 
 ---
 
+## Session 6 — 10 novembre 2026 · FPS chacun pour soi (PvP)
+
+**Décisions**
+- Un seul jeu « FPS » avec un réglage **Mode de jeu** (robots / chacun pour soi) plutôt qu'un 2e mode :
+  mêmes règles de questions, même interface.
+- Comme l'Arène : chaque navigateur calcule **son propre déplacement** (réactivité), mais le **serveur
+  tranche les dégâts** : il vérifie munitions, cadence, distance (poing, rayon des explosions) et refuse
+  les téléportations (6 m max par message). Le tir au revolver est visé côté tireur (« favor the
+  shooter ») : simple et agréable, suffisant en classe.
+- Réapparition au point le plus éloigné des autres + 1,5 s d'invulnérabilité (pas de « spawn kill »).
+- Points d'apparition éloignés des passerelles des coins (les élèves apparaissaient face à un mur).
+- Vue prof : carte vue du dessus en 2D (lisible au projecteur), le classement reste celui de la page prof.
+
+**Réalisé**
+- Serveur (`modes/fps/server.js`) : énergie, actions `pos` / `shoot` / `rocket` / `boom` / `punch`,
+  étourdissements (`feed`, question pour revenir), état de tous les joueurs ~15 fois par seconde,
+  régénération identique au jeu. Colonnes du classement : Étourdis / Subis.
+- Jeu (`game.js`, `&mode=pvp`) : avatars des autres (couleur, nom, interpolation 110 ms, clignotent quand
+  invulnérables), touches au revolver (corps / tête), roquettes et explosions visibles chez tout le monde,
+  poing et piqué contre les joueurs, poussée quand on est touché, « Étourdi par X ».
+- Vue prof PvP : carte de l'arène avec joueurs, regard, énergie, traits de tir, explosions.
+- Testé : 2 robots par socket (téléportation limitée, poing de loin refusé, poing + 2 tirs à la tête =
+  étourdi, question pour revenir, réapparition éloignée, tir sans munitions refusé, rapport) ;
+  dans Chrome : 2 élèves + prof, avatar visible et touché, roquette d'un autre joueur. v0.7.0.
+
+**Reste ouvert**
+- Test en classe à 20+ : bande passante (état de tous à 15 Hz), équité du tir côté tireur.
+- Coop contre des vagues de robots ; orbes de bonus sur la carte ; thème et assets.
+
+---
+
 ## Session 5 — 10 novembre 2026 · Première version jouable du FPS avec questions
 
 **Décisions**

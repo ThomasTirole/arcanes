@@ -85,18 +85,29 @@ Tous les chiffres (dégâts, vitesses, durées) et la carte sont en haut de `mod
 Images de la carte : pack **Medieval RTS de Kenney** (www.kenney.nl), licence CC0, dans
 `modes/arena/public/assets/medieval/`.
 
-## Le jeu « FPS » (première version)
+## Le jeu « FPS »
 
-Choisi au lancement comme l'Arène (`modes/fps/`). **Chaque élève joue dans sa propre arène 3D contre des
-vagues de robots** ; le serveur gère les questions, les munitions, le classement et le rapport :
+Choisi au lancement comme l'Arène (`modes/fps/`), avec un réglage **« Mode de jeu »** :
+
+- **Contre les robots** : chaque élève joue dans sa propre arène 3D contre des vagues de robots ;
+- **Chacun pour soi** (PvP) : tous les élèves dans la **même arène**, on s'étourdit entre joueurs.
+
+Dans les deux cas, le serveur gère les questions, les munitions, le classement et le rapport :
 
 - vague de questions → **munitions** (bonne réponse : +12 balles, +2 roquettes ; avec aménagements, une
   mauvaise réponse donne quand même 5 balles) ;
-- étourdi par les robots → 1 question pour revenir ; plus de munitions (ou `R`) → 2 questions ;
-- classement : robots étourdis, puis précision ; vue prof = grand classement en direct ;
-- pas encore de PvP ni de coop (voir la roadmap).
+- étourdi → 1 question pour revenir ; plus de munitions (ou `R`) → 2 questions ;
+- classement : joueurs (ou robots) étourdis, puis précision.
 
-Le jeu tourne dans une iframe (`modes/fps/public/index.html?embed=1`) qui échange avec la page élève.
+**PvP** : 100 points d'énergie, revolver 34 (tête 68), roquette jusqu'à 90 avec poussée, poing 40.
+Le navigateur de chaque élève calcule son propre déplacement et annonce ses touches ; **le serveur
+décide** (munitions, cadence de tir, distance, invulnérabilité de 1,5 s à la réapparition, régénération
+après 3 s). Après une question, l'élève réapparaît au point le plus éloigné des autres. Vue prof : **carte
+de l'arène vue du dessus** (joueurs, regard, énergie, tirs, explosions) + classement en direct.
+En mode robots, vue prof = grand classement en barres.
+
+Le jeu tourne dans une iframe (`modes/fps/public/index.html?embed=1`, `&mode=pvp` en PvP) qui échange avec
+la page élève.
 Le prototype solo reste jouable sans questions sur `/proto/fps/` (mêmes fichiers).
 
 - Déplacements inspirés d'Ultrakill : saut haut + **double saut**, **saut mural** (3 de suite), contrôle
@@ -109,9 +120,9 @@ Le prototype solo reste jouable sans questions sur `/proto/fps/` (mêmes fichier
 - Armes : revolver (tir instantané, tête = dégâts doublés) et lance-roquettes (explosion, rocket jump)
 - Visée souris ou **clavier seul** (flèches pour viser, Entrée pour tirer)
 - Réglages (Échap) avec valeurs affichées : sensibilité, vitesse de visée au clavier, champ de vision, qualité
-- Three.js embarqué (`proto/fps/vendor`, licence MIT), sons synthétisés, aucun fichier externe
+- Three.js embarqué (`modes/fps/public/vendor`, licence MIT), sons synthétisés, aucun fichier externe
 
-Tous les chiffres de déplacement sont en haut de `proto/fps/game.js` (objet `P`).
+Tous les chiffres de déplacement sont en haut de `modes/fps/public/game.js` (objet `P`).
 
 ## Les questions
 
@@ -168,9 +179,8 @@ public/               pages communes : élève (index.html), prof (prof.html), f
                       icônes SVG maison (js/icons.js — pas d'emoji dans l'appli),
                       import/export Excel (js/import.js, vendor/xlsx.full.min.js = SheetJS, licence Apache 2.0)
 test/                 unit.js (correction, import) et simulation.js (partie complète) — npm test
-proto/fps/            prototype FPS solo (index.html, game.js, vendor/three.module.min.js)
 docs/                 JOURNAL.md (journal de travail), ROADMAP.md (idées et prochaines étapes)
-.github/workflows/    deploy.yml (déploiement automatique sur Infomaniak)
+.github/workflows/    deploy.yml (déploiement SSH, lancement manuel seulement — la mise à jour passe par « Build »)
 scripts/              remote-deploy.sh (lancé sur le serveur après l'envoi : npm install si besoin + .restart)
 ```
 
