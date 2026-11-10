@@ -89,6 +89,7 @@
         correct: (Array.isArray(q.correct) ? q.correct : [q.correct]).map(Number).filter(Number.isInteger),
       };
       if (q.explanation) out.explanation = String(q.explanation);
+      if (q.fixedOrder) out.fixedOrder = true;
       return out;
     });
     return { title: data.title || '', questions, skipped: 0, errors: [] };

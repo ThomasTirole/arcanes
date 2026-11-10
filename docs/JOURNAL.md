@@ -25,6 +25,11 @@ Les plus récentes en haut.
 - Testé : logique serveur avec un robot (munitions, revive, recharge, limite), parcours complet dans
   Chrome (prof → élève → questions → jeu → classement).
 
+- Quiz Wayground de Tirtho (ICT-294, séq. 5) testé à l'import : 12/12 questions, explications comprises.
+  Problème repéré : une réponse « Les réponses 2 et 3 sont correctes » n'a plus de sens si l'ordre est
+  mélangé → **ordre gardé automatiquement** quand une réponse cite d'autres réponses, et case « Garder
+  l'ordre des réponses » dans l'éditeur (`fixedOrder`). v0.6.1.
+
 **Reste ouvert**
 - Premier test en classe : souris / clavier, performances, compréhension des élèves.
 - Thème et assets du FPS ; PvP et coop.

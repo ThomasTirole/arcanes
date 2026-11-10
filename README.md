@@ -115,6 +115,10 @@ Tous les chiffres de déplacement sont en haut de `proto/fps/game.js` (objet `P`
 
 - QCM à une ou plusieurs bonnes réponses (2 à 6 réponses). **Plusieurs bonnes réponses : l'élève n'a juste
   que s'il coche toutes les bonnes réponses et aucune autre.**
+- Les réponses sont **mélangées** pour chaque élève, **sauf** si une réponse cite d'autres réponses
+  (« les réponses 2 et 3 sont correctes », « toutes les réponses », « aucune des réponses »…) : l'ordre
+  d'origine est alors gardé automatiquement. Case « Garder l'ordre des réponses » dans l'éditeur pour le
+  forcer sur n'importe quelle question.
 - **Explication** facultative par question : montrée à l'élève quand il se trompe (si « montrer la bonne
   réponse » est activé), et toujours dans le rapport du prof.
 - **Rapport par question** : chaque question se déplie — juste / faux / sans réponse, nombre de fois que

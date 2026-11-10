@@ -62,7 +62,8 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 - [x] **[fait]** Import Excel / CSV compatible Wayground + modèle téléchargeable (session 4)
 - [x] **[fait]** Règle stricte pour les questions à plusieurs bonnes réponses (session 4)
 - [ ] Images dans les questions (lien ou envoi de fichier)
-- [ ] Temps par question réglable (par quiz ou par question)
+- [x] **[fait]** Ordre des réponses gardé pour les questions du type « les réponses 2 et 3 » (auto + case dans l'éditeur) (session 5)
+- [ ] Temps par question réglable (par quiz ou par question) — la colonne « Time in seconds » de Wayground est déjà dans les fichiers
 - [ ] Autres types : vrai/faux, réponse à taper (texte court), remise en ordre
 - [ ] Dossiers / étiquettes pour ranger les quiz (par module : Excel, MCD, Java…)
 - [ ] **[idée]** Génération de questions à partir d'un cours (IA)

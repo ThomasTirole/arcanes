@@ -197,7 +197,11 @@
           el('span', { class: 'muted', style: 'font-size:13px' },
             q.correct.length > 1 ? `${q.correct.length} bonnes réponses : l'élève doit toutes les cocher.`
               : 'Coche plusieurs réponses pour une question à choix multiples.')),
-        explain);
+        explain,
+        el('label', { class: 'keeporder' },
+          el('input', { type: 'checkbox', checked: !!q.fixedOrder, onchange: e => { q.fixedOrder = e.target.checked; } }),
+          'Garder l\'ordre des réponses (ne pas mélanger)',
+          el('span', { class: 'muted' }, ' — automatique si une réponse cite d\'autres réponses, ex. « les réponses 2 et 3 »')));
     }));
   }
 
@@ -231,6 +235,7 @@
           choices: keep.map(x => x.c),
           correct: keep.map((x, n) => (q.correct.includes(x.i) ? n : -1)).filter(n => n >= 0),
           explanation: (q.explanation || '').trim(),
+          fixedOrder: !!q.fixedOrder,
         };
       }),
     };

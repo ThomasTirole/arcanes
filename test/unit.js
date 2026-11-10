@@ -52,4 +52,9 @@ assert.deepStrictEqual(res.questions[1].correct, [1, 3]);
 assert.strictEqual(res.questions[0].explanation, 'Berne est la ville fédérale.');
 assert.strictEqual(res.skipped, 1);
 
+const { keepsOrder } = require('../lib/session');
+assert.ok(keepsOrder({ choices: ['a', 'b', 'c', 'Les réponses 2 et 3 sont correctes'] }), 'référence à des réponses → ordre gardé');
+assert.ok(keepsOrder({ choices: ['x', 'Toutes les réponses'] }));
+assert.ok(keepsOrder({ choices: ['x', 'y'], fixedOrder: true }));
+assert.ok(!keepsOrder({ choices: ['=SOMME(A1:A10)', 'HTTP 404', 'Version 2'] }), 'pas de faux positif courant');
 console.log('OK — tests unitaires réussis');
