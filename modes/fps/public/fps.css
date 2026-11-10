@@ -1,0 +1,11 @@
+/* Mode FPS : l'iframe du jeu prend tout l'écran sous l'horloge */
+.fps-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+.fps-spec { position: absolute; inset: 0; padding: 70px 40px 20px; overflow: auto; }
+.fps-spec-title { display: flex; align-items: center; gap: 10px; font-size: 26px; font-weight: 700; margin-bottom: 18px; }
+.fps-board { display: flex; flex-direction: column; gap: 8px; max-width: 900px; }
+.fps-row { display: grid; grid-template-columns: 32px 18px 180px 1fr 50px; gap: 12px; align-items: center; font-size: 20px; }
+.fps-rank { color: var(--muted); text-align: right; }
+.fps-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fps-bar { height: 18px; background: rgba(255,255,255,.08); border-radius: 9px; overflow: hidden; }
+.fps-bar i { display: block; height: 100%; border-radius: 9px; transition: width .4s; }
+.fps-num { text-align: right; font-variant-numeric: tabular-nums; }

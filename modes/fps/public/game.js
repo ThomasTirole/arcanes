@@ -3,6 +3,11 @@
 // les performances sur les PC de l'école. Pas encore de questions ni de multijoueur.
 import * as THREE from './vendor/three.module.min.js';
 
+// ?embed=1 : intégré dans une partie Arcanes (munitions données par les questions, échanges avec la page parente)
+const EMBED = new URLSearchParams(location.search).has('embed');
+const toParent = msg => { if (EMBED) window.parent.postMessage({ arcanesFps: true, ...msg }, location.origin); };
+let embedPaused = EMBED;     // en partie : pause tant que la page parente ne donne pas le départ
+
 // ------------------------------------------------------------------ réglages du jeu
 const P = {
   gravity: 27,
@@ -236,7 +241,7 @@ function tryJump(now) {
   const wn = wallNormal();
   if (wn && p.wallJumps > 0) {
     p.wallJumps--;
-    p.vel.x = wn.x * 9 + wish.x * 4; p.vel.z = wn.z * 9 + wish.z * 4;
+    p.vel.x = wn.x * 7 + wish.x * 2; p.vel.z = wn.z * 7 + wish.z * 2;
     p.vel.y = P.jump * 0.9;
     p.slamming = false;
     burst(p.pos.clone().add(new THREE.Vector3(-wn.x * 0.4, 1, -wn.z * 0.4)), 0xe9d5ff, 8, 4);
@@ -246,6 +251,10 @@ function tryJump(now) {
   if (p.airJumps > 0) {
     p.airJumps--;
     p.vel.y = P.doubleJump;
+    // le double saut ne donne pas d'élan : on garde au plus la vitesse de course, dans la direction voulue
+    const h = Math.hypot(p.vel.x, p.vel.z), keep = Math.min(h, P.groundSpeed);
+    if (wish.lengthSq()) { p.vel.x = wish.x * keep; p.vel.z = wish.z * keep; }
+    else if (h > keep) { p.vel.x *= keep / h; p.vel.z *= keep / h; }
     p.slamming = false;
     ring(p.pos.clone(), 1.2, 0x67e8f9);
     sfx('dash');
@@ -506,9 +515,30 @@ function rayBoxes(origin, dir, maxD) {
   return best;
 }
 
+// munitions (seulement en partie : elles viennent des bonnes réponses)
+const ammo = [0, 0];
+let emptySent = false;
+function updateAmmoHud() {
+  document.querySelectorAll('#weapons div').forEach(d => {
+    const i = Number(d.dataset.w);
+    d.textContent = `${i + 1} · ${WEAPONS[i].name}` + (EMBED ? ` (${ammo[i]})` : '');
+  });
+}
 function fire(now) {
   const p = player;
   if (!p.alive || p.cooldown > 0 || swapAnim > 0.3) return;
+  if (EMBED) {
+    if (ammo[p.weapon] <= 0) {
+      const other = 1 - p.weapon;
+      if (ammo[other] > 0) selectWeapon(other);
+      else if (!emptySent) { emptySent = true; toParent({ t: 'empty' }); }
+      return;
+    }
+    ammo[p.weapon]--;
+    updateAmmoHud();
+    toParent({ t: 'ammoLeft', ammo: ammo.slice() });
+    if (ammo[0] <= 0 && ammo[1] <= 0 && !emptySent) { emptySent = true; setTimeout(() => toParent({ t: 'empty' }), 600); }
+  }
   const w = WEAPONS[p.weapon];
   p.cooldown = w.rate;
   p.kick += w.kick;
@@ -658,6 +688,7 @@ function damageEnemy(e, dmg, at, head, how) {
     if (how === 'parade') addStyle(120, 'RENVOI');
     if (how === 'piqué') addStyle(80, 'PIQUÉ');
     if (close) { player.hp = Math.min(100, player.hp + 10); addStyle(30, 'AU CONTACT'); }
+    toParent({ t: 'kill', head: !!head, air: !player.onGround, how: how || '' });
     document.getElementById('score').textContent = score;
     const c = e.mesh.position.clone().add(e.center);
     burst(c, e.flying ? 0x60a5fa : 0x9ca3af, 22, 8, true);
@@ -764,8 +795,9 @@ function hurtPlayer(n, fromEnemy) {
   if (player.hp <= 0) {
     player.hp = 0;
     player.alive = false;
-    banner('Étourdi ! R pour recommencer', '#f87171', 999999);
+    banner(EMBED ? 'Étourdi !' : 'Étourdi ! R pour recommencer', '#f87171', EMBED ? 1500 : 999999);
     sfx('down');
+    toParent({ t: 'down' });
   }
 }
 
@@ -970,6 +1002,7 @@ for (const id of ['sens', 'keyTurn', 'fov', 'quality']) {
 
 function requestLock() { try { canvas.requestPointerLock(); } catch (e) { /* rien */ } }
 document.getElementById('play').addEventListener('click', () => {
+  if (EMBED && embedPaused) return;
   menu.classList.add('hidden');
   if (!started) { started = true; restart(); }
   requestLock();
@@ -996,7 +1029,7 @@ document.addEventListener('mousedown', e => { if (locked && e.button === 0) mous
 document.addEventListener('mouseup', e => { if (e.button === 0) mouseDown = false; });
 document.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('wheel', () => { if (locked) selectWeapon(1 - player.weapon); });
-const paused = () => !menu.classList.contains('hidden');
+const paused = () => !menu.classList.contains('hidden') || embedPaused;
 document.addEventListener('keydown', e => {
   if (paused()) {
     if (e.code === 'Escape' && started) { menu.classList.add('hidden'); requestLock(); }
@@ -1011,11 +1044,61 @@ document.addEventListener('keydown', e => {
   if (e.code === 'Digit2' || e.code === 'Numpad2') selectWeapon(1);
   if (e.code === 'KeyQ') selectWeapon(1 - player.weapon);
   if (e.code === 'KeyC' && !e.repeat && !player.onGround && player.alive && player.dashT <= 0) player.slamming = true;
-  if (e.code === 'KeyR' && !player.alive) restart();
+  if (e.code === 'KeyR' && !player.alive && !EMBED) restart();
+  if (e.code === 'KeyR' && EMBED && player.alive) toParent({ t: 'reload' });
   if (e.code === 'Escape' && !locked && started) { menu.classList.remove('hidden'); document.getElementById('play').textContent = 'Reprendre'; }
 });
 document.addEventListener('keyup', e => { keys[e.code] = false; });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; mouseDown = false; });
+
+// ------------------------------------------------------------------ intégration dans une partie Arcanes
+function revive() {
+  for (const sh of enemyShots) scene.remove(sh.mesh);
+  enemyShots.length = 0;
+  Object.assign(player, { hp: 100, alive: true, slamming: false, sliding: false });
+  player.pos.set(0, 2.5, 10); player.vel.set(0, 0, 0);
+  // les robots trop proches reculent un peu
+  for (const e of enemies) if (e.mesh.position.distanceTo(player.pos) < 8) e.mesh.position.add(e.mesh.position.clone().sub(player.pos).setY(0).normalize().multiplyScalar(8));
+  hideBanner();
+}
+if (EMBED) {
+  document.getElementById('menuText').textContent = 'Réponds aux questions pour gagner des munitions, puis étourdis un maximum de robots !';
+  document.getElementById('play').textContent = 'Jouer';
+  document.getElementById('topLeft').lastChild.textContent = ' · Arcanes';
+  document.getElementById('topLeft').style.top = '110px';   // laisse la place à l'horloge de la partie
+  updateAmmoHud();
+  window.addEventListener('message', ev => {
+    if (ev.origin !== location.origin || !ev.data || !ev.data.arcanesFps) return;
+    const m = ev.data;
+    if (m.t === 'pause') {
+      embedPaused = true;
+      for (const k in keys) keys[k] = false;
+      mouseDown = false;
+      if (document.pointerLockElement) document.exitPointerLock();
+    } else if (m.t === 'resume') {
+      embedPaused = false;
+      if (!started) { started = true; restart(); }
+      menu.classList.remove('hidden');      // un clic est nécessaire pour reprendre la souris
+      document.getElementById('play').textContent = 'Reprendre';
+      document.getElementById('menuHint').textContent = 'Clique sur Reprendre (ou appuie sur Entrée) pour revenir dans l\'arène.';
+    } else if (m.t === 'ammo') {
+      ammo[0] = m.ammo[0]; ammo[1] = m.ammo[1];
+      if (ammo[0] > 0 || ammo[1] > 0) emptySent = false;
+      updateAmmoHud();
+    } else if (m.t === 'revive') {
+      revive();
+    } else if (m.t === 'reset') {
+      started = false; embedPaused = true; score = 0; style = 0;
+    }
+  });
+  // Entrée dans le menu = reprendre (pratique au clavier)
+  document.addEventListener('keydown', e => {
+    if ((e.code === 'Enter' || e.code === 'NumpadEnter') && !menu.classList.contains('hidden') && started && !embedPaused) {
+      document.getElementById('play').click();
+    }
+  });
+  toParent({ t: 'ready' });
+}
 
 // ------------------------------------------------------------------ boucle
 let last = performance.now();

@@ -83,11 +83,19 @@ Tous les chiffres (dégâts, vitesses, durées) et la carte sont en haut de `mod
 Images de la carte : pack **Medieval RTS de Kenney** (www.kenney.nl), licence CC0, dans
 `modes/arena/public/assets/medieval/`.
 
-## Prototype FPS (solo)
+## Le jeu « FPS » (première version)
 
-`/proto/fps/` (ex. https://quiz.tirtho.ch/proto/fps/) : arène 3D d'entraînement contre des vagues de robots,
-pour régler la sensation de jeu et tester les performances sur les PC de l'école (compteur d'images/s
-affiché). Pas encore de questions ni de multijoueur.
+Choisi au lancement comme l'Arène (`modes/fps/`). **Chaque élève joue dans sa propre arène 3D contre des
+vagues de robots** ; le serveur gère les questions, les munitions, le classement et le rapport :
+
+- vague de questions → **munitions** (bonne réponse : +12 balles, +2 roquettes ; avec aménagements, une
+  mauvaise réponse donne quand même 5 balles) ;
+- étourdi par les robots → 1 question pour revenir ; plus de munitions (ou `R`) → 2 questions ;
+- classement : robots étourdis, puis précision ; vue prof = grand classement en direct ;
+- pas encore de PvP ni de coop (voir la roadmap).
+
+Le jeu tourne dans une iframe (`modes/fps/public/index.html?embed=1`) qui échange avec la page élève.
+Le prototype solo reste jouable sans questions sur `/proto/fps/` (mêmes fichiers).
 
 - Déplacements inspirés d'Ultrakill : saut haut + **double saut**, **saut mural** (3 de suite), contrôle
   complet en l'air (gauche / droite en sautant), **dash** (Maj, 3 charges), **glissade** (C maintenu au sol)

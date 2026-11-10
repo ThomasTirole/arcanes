@@ -5,6 +5,32 @@ Les plus récentes en haut.
 
 ---
 
+## Session 5 — 10 novembre 2026 · Première version jouable du FPS avec questions
+
+**Décisions**
+- Peu de temps avant un cours : pas de multijoueur, **chaque élève joue seul contre des robots**, mais
+  dans la même partie Arcanes (questions, munitions, classement commun, rapport). Rapide à livrer et
+  testable en classe ; PvP / coop restent la suite.
+- Le jeu 3D tourne dans une **iframe** (le prototype quasi inchangé, mode `?embed=1`) reliée à la page
+  élève par messages : moins de risque qu'une réécriture.
+- Robots étourdis annoncés par le navigateur, limités à 6 par seconde côté serveur (garde-fou simple).
+
+**Réalisé**
+- `modes/fps/` : serveur (vagues de questions, munitions balles / roquettes, question pour revenir,
+  recharge, classement robots / étourdi), client (iframe, pause pendant les questions, « Reprendre »),
+  vue prof (classement en barres + fil des robots étourdis).
+- Le prototype a déménagé dans `modes/fps/public/` ; `/proto/fps/` pointe dessus.
+- **Double saut corrigé** : il ne donne plus d'élan (vitesse plafonnée à la course, dans la direction
+  voulue) ; saut mural moins propulsif.
+- Testé : logique serveur avec un robot (munitions, revive, recharge, limite), parcours complet dans
+  Chrome (prof → élève → questions → jeu → classement).
+
+**Reste ouvert**
+- Premier test en classe : souris / clavier, performances, compréhension des élèves.
+- Thème et assets du FPS ; PvP et coop.
+
+---
+
 ## Session 4 — 4 novembre 2026 · GitHub, déploiement auto, fluidité, rapport détaillé
 
 **Décisions**

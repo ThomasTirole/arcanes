@@ -68,8 +68,8 @@ app.delete('/api/quizzes/:id', auth, (req, res) => {
 
 app.get('/prof', (req, res) => res.sendFile(path.join(__dirname, 'public', 'prof.html')));
 
-// prototypes autonomes (ex. /proto/fps/) — pas encore des modes de jeu
-app.use('/proto', express.static(path.join(__dirname, 'proto')));
+// le prototype FPS solo reste accessible ici (mêmes fichiers que le mode « fps »)
+app.use('/proto/fps', express.static(path.join(__dirname, 'modes', 'fps', 'public')));
 
 // État public minimal : utilisé par le déploiement automatique pour attendre la fin des parties.
 const VERSION = require('./package.json').version;
