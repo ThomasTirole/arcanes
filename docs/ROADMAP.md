@@ -36,7 +36,17 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
         arène qui change, armes alternatives (tir secondaire)
   - [x] **[fait]** PvP « chacun pour soi » dans la même arène, réglage « Mode de jeu » au lancement,
         serveur juge des dégâts, carte vue du dessus pour le prof (session 6)
-  - [ ] Tester le PvP en classe (20+ élèves, réseau de l'école)
+  - [x] **[fait]** Premier test du PvP en classe (10 nov. 2026) — retours à corriger :
+    - [ ] **Spawnkill** : les élèves se font étourdir juste après la réapparition (invulnérabilité trop
+          courte ? apparition en vue des autres ? protéger tant qu'on n'a pas bougé / tiré)
+    - [ ] **Délai après un étourdissement** avant la question : ils cliquent par réflexe sur une réponse
+          (bloquer les clics 1-2 s, ou afficher « Étourdi par X » avant d'ouvrir la question)
+    - [ ] **Temps pour régler la sensibilité** : pouvoir ouvrir les réglages sans se faire tirer dessus
+          (réglages avant le départ, ou invulnérable / caché tant que le menu est ouvert)
+    - [ ] **Alt+Tab** : au retour, le menu des réglages réapparaît (la souris est libérée) — reprendre
+          directement d'un clic dans le jeu
+    - [ ] **Sortie de la carte avec des sauts muraux** : murs d'enceinte trop bas ou collision ratée ;
+          plafond invisible + le serveur ramène dans l'arène
   - [ ] Coop : toute la classe contre des vagues de robots dans la même arène
   - [ ] **[idée]** Spectateur PvP : cliquer un joueur sur la carte pour voir sa vue / le suivre
   - [ ] **[idée]** PvP par équipes (deux couleurs) et carte plus grande selon le nombre de joueurs
