@@ -74,7 +74,8 @@ class ArenaSession extends Session {
     text: 'Réponds aux questions pour gagner des sorts. Dans l\'arène, étourdis les autres joueurs. '
       + 'Plus de sorts ou étourdi ? Retour aux questions pour recharger. Celui qui fait le plus de stuns gagne !',
     controls: [
-      ['↑↓←→ / WASD', 'bouger'],
+      ['WASD', 'bouger'],
+      ['↑↓←→', 'tirer (maintenir)'],
       ['Espace / clic', 'lancer'],
       ['1-2-3', 'changer de sort'],
       ['R', 'recharger'],

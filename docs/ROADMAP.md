@@ -52,6 +52,7 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 - [ ] **[idée]** Personnages : utiliser les petits soldats du pack Kenney (4 couleurs) à la place des mages ?
 - [x] **[fait]** Plus aucun emoji dans l'appli : icônes SVG maison (session 4)
 - [ ] **[idée]** Cartes créées par les élèves (comme WayArena) avec leur nom en filigrane
+- [x] **[fait]** WASD pour bouger, flèches pour tirer (session 5)
 - [ ] Plus de sorts débloqués selon les réglages (bouclier, téléportation, soin…)
 - [ ] Avatars / couleurs choisis par l'élève
 - [ ] Mode équipes

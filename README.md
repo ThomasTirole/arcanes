@@ -65,9 +65,11 @@ Le temps réel passe par Socket.io (WebSocket, avec repli automatique en long-po
 | Gel | 2 | onde autour de soi, 10 dégâts + gel 1,8 s | +2 (max 5) |
 | Boule de feu | 3 | projectile lent, 30 dégâts + explosion | +1 (max 5) |
 
-**Contrôles** : flèches ou WASD (position physique des touches : marche en QWERTZ suisse, QWERTY et AZERTY),
-Espace ou clic pour lancer (le clic vise la souris, Espace tire droit devant), 1-2-3 pour changer de sort.
-Pendant le quiz : 1-6 pour répondre, Entrée pour valider / continuer.
+**Contrôles** : **WASD pour bouger, flèches pour tirer** dans leur direction (diagonales en combinant deux
+flèches ; maintenir = tir continu, le Gel part une fois par appui) — pratique sans souris. Espace tire droit
+devant, le clic vise la souris, 1-2-3 change de sort, R recharge. Touches repérées par leur position
+physique : marche en QWERTZ suisse, QWERTY et AZERTY. Pendant le quiz : 1-6 pour répondre, Entrée pour
+valider / continuer.
 
 **Fluidité** : le navigateur simule lui-même le déplacement de son joueur (aucun délai ressenti) et le
 serveur vérifie les positions (vitesse max, obstacles). Les autres joueurs sont interpolés, les projectiles

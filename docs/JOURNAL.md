@@ -30,6 +30,9 @@ Les plus récentes en haut.
   mélangé → **ordre gardé automatiquement** quand une réponse cite d'autres réponses, et case « Garder
   l'ordre des réponses » dans l'éditeur (`fixedOrder`). v0.6.1.
 
+- Arène, à la demande de Tirtho : **WASD = bouger, flèches = tirer** dans leur direction (tir continu en
+  maintenant, Gel une fois par appui), façon Binding of Isaac. v0.6.2.
+
 **Reste ouvert**
 - Premier test en classe : souris / clavier, performances, compréhension des élèves.
 - Thème et assets du FPS ; PvP et coop.

@@ -4,7 +4,9 @@
 (function () {
   'use strict';
 
-  const MOVE = { ArrowUp: 'u', KeyW: 'u', ArrowDown: 'd', KeyS: 'd', ArrowLeft: 'l', KeyA: 'l', ArrowRight: 'r', KeyD: 'r' };
+  // WASD pour bouger, flèches pour tirer dans leur direction (façon « Binding of Isaac »)
+  const MOVE = { KeyW: 'u', KeyS: 'd', KeyA: 'l', KeyD: 'r' };
+  const AIM = { ArrowUp: 'u', ArrowDown: 'd', ArrowLeft: 'l', ArrowRight: 'r' };
   const SEND_EVERY = 33;     // ms entre deux envois de position (~30 par seconde)
 
   function feedLine(el, f) {
@@ -49,7 +51,7 @@
       el('div', { class: 'hud-top' }, spells, el('div', { class: 'pill arena-score' }, ctx.ui.icon('burst', { size: 18, color: '#fde047' }), scoreEl, ' stuns')),
       feed,
       el('div', { class: 'hud-bottom' },
-        el('kbd', null, '↑↓←→'), '/', el('kbd', null, 'WASD'), ' bouger  •  ',
+        el('kbd', null, 'WASD'), ' bouger  •  ', el('kbd', null, '↑↓←→'), ' tirer (maintenir)  •  ',
         el('kbd', null, '1'), el('kbd', null, '2'), el('kbd', null, '3'), ' sorts  •  ',
         el('kbd', null, 'Espace'), '/clic lancer  •  ', el('kbd', null, 'R'), ' recharger'));
 
@@ -103,7 +105,20 @@
     socket.on('you:stunned', m => ctx.banner(m.by ? `Étourdi par ${m.by} !` : 'Étourdi !', '#f87171'));
 
     // ---- clavier / souris
-    function releaseAll() { for (const k of Object.keys(keys)) keys[k] = false; }
+    const aimKeys = { u: false, d: false, l: false, r: false };
+    function releaseAll() { for (const k of Object.keys(keys)) keys[k] = false; for (const k of Object.keys(aimKeys)) aimKeys[k] = false; }
+
+    // direction donnée par les flèches (diagonales comprises), ou null
+    function arrowDir() {
+      const x = (aimKeys.r ? 1 : 0) - (aimKeys.l ? 1 : 0), y = (aimKeys.d ? 1 : 0) - (aimKeys.u ? 1 : 0);
+      if (!x && !y) return null;
+      const d = Math.hypot(x, y);
+      return { x: x / d, y: y / d };
+    }
+    function castArrows() {
+      const d = arrowDir();
+      if (d) cast({ x: me.x + d.x * 100, y: me.y + d.y * 100 });
+    }
 
     function cast(aimPoint) {
       if (!me.ready || me.state !== 'a' || me.frozen) return;
@@ -143,6 +158,14 @@
       if (!ctx.isPlaying() || ctx.quizOpen()) return;
       const m = MOVE[e.code];
       if (m) { e.preventDefault(); keys[m] = true; return; }
+      const a = AIM[e.code];
+      if (a) {
+        e.preventDefault();
+        aimKeys[a] = true;
+        // le Gel (sort de zone) part une fois par appui ; les projectiles partent en continu (voir simulate)
+        if (!e.repeat) castArrows();
+        return;
+      }
       if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) cast(null); return; }
       const digit = /^(Digit|Numpad)([1-9])$/.exec(e.code);
       if (digit) {
@@ -152,7 +175,10 @@
       }
       if (e.code === 'KeyR') ctx.action('reload', {});
     });
-    window.addEventListener('keyup', e => { const m = MOVE[e.code]; if (m) keys[m] = false; });
+    window.addEventListener('keyup', e => {
+      const m = MOVE[e.code]; if (m) keys[m] = false;
+      const a = AIM[e.code]; if (a) aimKeys[a] = false;
+    });
     window.addEventListener('blur', releaseAll);
     canvas.addEventListener('mousedown', e => {
       if (!ctx.isPlaying() || ctx.quizOpen() || e.button !== 0) return;
@@ -183,9 +209,16 @@
       if (me.ready && me.state === 'a' && !me.frozen && !ctx.quizOpen()) {
         Phys.step(me, keys, info.speed, dt, R, info.map);
       }
-      // la souris oriente le bâton si elle a bougé récemment, sinon la direction de marche
+      // orientation du bâton : flèches, sinon souris récente, sinon direction de marche
       const moving = keys.u || keys.d || keys.l || keys.r;
-      me.aim = mouseAim && now - mouseAt < 1500 && !moving ? Math.atan2(mouseAim.y - me.y, mouseAim.x - me.x) : null;
+      const ad = arrowDir();
+      if (ad) {
+        me.aim = Math.atan2(ad.y, ad.x);
+        // tir continu tant qu'une flèche est maintenue (projectiles uniquement)
+        if (info.spells[slot].kind === 'proj' && !ctx.quizOpen()) castArrows();
+      } else {
+        me.aim = mouseAim && now - mouseAt < 1500 && !moving ? Math.atan2(mouseAim.y - me.y, mouseAim.x - me.x) : null;
+      }
       sendPos(false);
     }
 
