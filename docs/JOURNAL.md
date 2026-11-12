@@ -5,6 +5,32 @@ Les plus récentes en haut.
 
 ---
 
+## Session 9 — 12 novembre 2026 · Vraie direction médiévale + correctif du FPS en ligne
+
+**Décisions**
+- Tirtho : la première DA (cartes sombres arrondies, bouton doré) faisait « appli moderne / IA ». Nouvelle
+  direction **manuscrit enluminé** : vélin sur mur de pierre, encre, vermillon, lapis, double filet, gothique
+  pour les titres, lettrine sur chaque question, réponses en bannières héraldiques, écus pour les joueurs.
+  La liste des quiz devient un seul feuillet réglé (pas une pile de cartes).
+- **Polices embarquées** (OFL) au lieu de Google Fonts : marche même si le réseau de l'école bloque Google.
+- FPS en ligne bloqué chez Tirtho (`SyntaxError: expected expression, got '<'` = un fichier JS reçu sous forme
+  de page HTML, cause exacte non trouvée, pas reproduit dans Chrome) : l'habillage médiéval est maintenant
+  chargé **à part** (import dynamique) et sans « importmap » ; si quelque chose manque, le jeu démarre quand
+  même avec les boîtes. v0.8.1.
+
+**Réalisé**
+- `public/css/style.css` réécrit, `public/css/fonts.css`, `public/fonts/`, `public/img/pierre.webp`, styles de
+  `prof.html` (liste réglée, éditeur avec numéros gothiques rouges, cartes de mode à double filet, classement
+  en direct sur vélin), `quiz.js` (lettrine, couleur du titre par la feuille de style), couleurs des
+  pourcentages en sinople / or / gueules. HUD et menu du FPS en vélin. v0.9.0.
+- Captures vérifiées : accueil élève, liste prof, lancement, quiz, vue en direct, menu et HUD du FPS.
+
+**Reste ouvert**
+- Savoir quel fichier renvoyait du HTML chez Tirtho (nom du fichier dans la console, navigateur).
+- Arène 2D dans le même thème.
+
+---
+
 ## Session 8 — 12 novembre 2026 · Assets médiévaux et nouvelle direction artistique
 
 **Décisions**

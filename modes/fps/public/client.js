@@ -76,7 +76,7 @@
         send({ t: 'pause' });
         try { frame.blur(); window.focus(); } catch (e) { /* rien */ }
       },
-      quizHeader: () => el('span', { class: 'pill' }, ctx.ui.icon('burst', { size: 16, color: '#fde047' }), pvp ? ` ${kills} étourdis` : ` ${kills} brigands`),
+      quizHeader: () => el('span', { class: 'pill' }, ctx.ui.icon('sword', { size: 16, color: '#f0d79a' }), pvp ? ` ${kills} étourdis` : ` ${kills} brigands`),
       onQuizResult(res) { if (res.ammo) send({ t: 'ammo', ammo: res.ammo }); },
       onQuizDone(res) {
         if (res.ammo) send({ t: 'ammo', ammo: res.ammo });

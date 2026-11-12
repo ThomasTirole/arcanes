@@ -36,7 +36,7 @@
     return el('span', { class: 'dot', style: `background:${color}${size ? `;width:${size}px;height:${size}px` : ''}` });
   }
 
-  function pctColor(v) { return v >= 70 ? '#4ade80' : v >= 40 ? '#facc15' : '#f87171'; }
+  function pctColor(v) { return v >= 70 ? '#3b6b2a' : v >= 40 ? '#a8741e' : '#8f2314'; }   // sinople, or, gueules
 
   // Texte court du score principal d'un joueur, ex. « 3 stuns »
   function mainScore(row, columns) {
@@ -82,7 +82,7 @@
         el('tbody', null, sorted.map((r, i) => el('tr', { class: r.id === opts.meId ? 'me' : '' },
           el('td', null, String(i + 1)),
           cols.map(c => c.key === 'name'
-            ? el('td', null, el('span', { class: 'namecell' }, dot(r.color), r.name, opts.bestId === r.id ? window.Icons.icon('crown', { size: 16, color: '#facc15', title: 'Meilleure précision' }) : ''))
+            ? el('td', null, el('span', { class: 'namecell' }, dot(r.color), r.name, opts.bestId === r.id ? window.Icons.icon('crown', { size: 16, color: '#b0832a', title: 'Meilleure précision' }) : ''))
             : el('td', { class: 'num' }, c.fmt ? c.fmt(r[c.key], r) : String(r[c.key])))))));
     }
     paint();

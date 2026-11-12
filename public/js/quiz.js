@@ -39,11 +39,13 @@
       open = true;
       $('#quiz').classList.remove('hidden');
       const reasons = { ...DEFAULT_REASONS, ...(mode().reasons || {}) };
-      const [title, color] = reasons[data.reason] || reasons.burst;
+      const [title] = reasons[data.reason] || reasons.burst;
       $('#quizTitle').textContent = title;
-      $('#quizTitle').style.color = color;
+      $('#quizTitle').dataset.reason = data.reason;   // couleur choisie par la feuille de style (encre du feuillet)
       $('#quizProgress').textContent = `${data.progress.index}/${data.progress.total}`;
-      $('#qText').textContent = data.text;
+      // lettrine enluminée sur la première lettre (si la question commence par une lettre)
+      const first = /^\p{L}/u.test(data.text) ? data.text[0] : '';
+      $('#qText').replaceChildren(...(first ? [el('span', { class: 'initial' }, first), data.text.slice(1)] : [data.text]));
       $('#qHint').classList.toggle('hidden', !data.multi);
       $('#qFoot').replaceChildren();
       if (data.multi) {

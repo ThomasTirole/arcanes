@@ -1,6 +1,6 @@
 {
   "name": "arcanes",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "description": "Ar\u00e8ne de r\u00e9vision multijoueur pour la classe",
   "main": "server.js",
   "scripts": {

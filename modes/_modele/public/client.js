@@ -15,7 +15,7 @@
       return {
         // toutes ces fonctions sont facultatives
         frame() { big.textContent = points; },             // à chaque image
-        quizHeader: () => el('span', { class: 'pill' }, ctx.ui.icon('star', { size: 16, color: '#fde68a' }), ` ${points}`),
+        quizHeader: () => el('span', { class: 'pill' }, ctx.ui.icon('star', { size: 16, color: '#8f2314' }), ` ${points}`),
         onQuizResult(res) { if (res.points != null) points = res.points; },
         onQuizDone(res) { if (res.points != null) points = res.points; },
         onStart() { points = 0; },

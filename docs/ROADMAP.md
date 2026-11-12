@@ -12,6 +12,8 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 - [x] **[fait]** **Assets et nouvelle direction artistique** médiévale : FPS (village, personnages, armes, sons) +
       pages élève / prof (couleurs, polices, icônes) (session 8)
 - [ ] Vérifier les performances du FPS médiéval sur les PC de l'école
+- [x] **[fait]** DA « manuscrit enluminé » : vélin sur pierre, gothique, lettrines, bannières héraldiques, polices embarquées (session 9)
+- [ ] Comprendre l'erreur « got '<' » vue en ligne sur la vue élève du FPS (session 9 : contournée, cause inconnue)
 - [ ] Arène 2D dans le thème médiéval (fond, sorts, personnages vus du dessus)
 - [ ] **[idée]** Choix de son personnage (classe) par l'élève avant la partie
 - [ ] **[idée]** Armes : arbalète, autres bâtons ; le pack Kenney *Blaster Kit* (science-fiction) reste de côté

@@ -15,7 +15,7 @@
 .spell { overflow: hidden; }
 .spell .cd { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: rgba(0,0,0,.45); pointer-events: none; }
 
-.hud-bottom { position: absolute; bottom: 0; left: 0; right: 0; text-align: center; background: rgba(18,13,36,.85); border-top: 1px solid var(--line); padding: 8px; font-size: 15px; color: var(--muted); }
+.hud-bottom { position: absolute; bottom: 0; left: 0; right: 0; text-align: center; background: var(--glass); border-top: 1px solid var(--line); padding: 8px; font-size: 15px; color: var(--muted); }
 .feed { position: absolute; top: 70px; right: 12px; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; pointer-events: none; }
 .feed div { background: var(--glass); border: 1px solid var(--line); border-radius: 10px; padding: 4px 10px; font-size: 14px; animation: fadeout 5s forwards; }
 @keyframes fadeout { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }

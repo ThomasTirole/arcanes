@@ -480,8 +480,8 @@
     const multi = good.size > 1;
     const pctOf = n => (answered ? Math.round((n / answered) * 100) : 0);
     const split = el('div', { class: 'qsplit' },
-      q.correct ? el('span', { style: `width:${(q.correct / q.asked) * 100}%;background:#16a34a` }, `✓ ${q.correct} juste${q.correct > 1 ? 's' : ''}`) : '',
-      wrong - (q.timeouts || 0) > 0 ? el('span', { style: `width:${((wrong - q.timeouts) / q.asked) * 100}%;background:#dc2626` }, `✗ ${wrong - q.timeouts} faux`) : '',
+      q.correct ? el('span', { style: `width:${(q.correct / q.asked) * 100}%;background:#3b6b2a` }, `✓ ${q.correct} juste${q.correct > 1 ? 's' : ''}`) : '',
+      wrong - (q.timeouts || 0) > 0 ? el('span', { style: `width:${((wrong - q.timeouts) / q.asked) * 100}%;background:#8f2314` }, `✗ ${wrong - q.timeouts} faux`) : '',
       q.timeouts ? el('span', { style: `width:${(q.timeouts / q.asked) * 100}%;background:#57534e` }, `${q.timeouts} sans rép.`) : '');
     return el('details', { class: 'qrep' },
       el('summary', null,
@@ -501,7 +501,7 @@
           return el('div', { class: 'opt' },
             el('span', { class: good.has(i) ? 'ok' : 'muted' }, good.has(i) ? '✓' : '·'),
             el('span', { style: good.has(i) ? 'font-weight:600' : '' }, c),
-            el('div', { class: 'bar' }, el('i', { style: `width:${pctOf(n)}%;background:${good.has(i) ? '#22c55e' : '#f87171'}` })),
+            el('div', { class: 'bar' }, el('i', { style: `width:${pctOf(n)}%;background:${good.has(i) ? '#3b6b2a' : '#8f2314'}` })),
             el('span', { class: 'n' }, `${n} · ${pctOf(n)}%`));
         })),
         q.wrong && q.wrong.length ? el('div', null,

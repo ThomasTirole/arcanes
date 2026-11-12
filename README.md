@@ -87,10 +87,14 @@ Images de la carte : pack **Medieval RTS de Kenney** (www.kenney.nl), licence CC
 
 ## Direction artistique
 
-Thème **médiéval « taverne »** sur les pages élève et prof (variables CSS dans `public/css/style.css`) :
-bois sombre, parchemin, or, rouge brique ; réponses aux couleurs héraldiques. Polices Google :
-**Cinzel** (titres) et **Alegreya Sans** (texte). Icônes SVG maison, dont `sword`, `shield`, `castle`,
-`scroll`, `potion`. Le dessin du jeu « Arène » (canvas) garde encore ses couleurs d'origine.
+Thème **manuscrit enluminé** (`public/css/style.css`) : des feuillets de **vélin** posés sur un **mur de pierre**,
+encre brune, rubriques **vermillon**, **bleu lapis**, petites touches d'or, doubles filets rouges autour des
+feuillets. Titres en écriture gothique (**UnifrakturMaguntia**), texte en **Alegreya** ; polices embarquées dans
+`public/fonts/` (licence OFL, pas de Google Fonts). Dans la fenêtre de questions : **lettrine enluminée** sur la
+première lettre, réponses sur des **bannières héraldiques** (gueules, azur, or, sinople, pourpre, sable) avec un
+numéro dans un écu. Les joueurs sont représentés par un écu à leur couleur. Icônes SVG maison, dont `sword`,
+`shield`, `castle`, `scroll`, `potion`. Le fond de pierre (`public/img/pierre.webp`) vient du pack Quaternius (CC0).
+Le dessin du jeu « Arène » (canvas) garde encore ses couleurs d'origine.
 
 ## Le jeu « FPS — place du village »
 
