@@ -39,6 +39,10 @@
     #weapons div { padding: 4px 10px; border-radius: 8px; border: 1px solid var(--line); font-size: 14px; color: var(--muted); }
     #weapons div.on { border-color: #fde68a; color: #fde68a; }
     #damage { position: fixed; inset: 0; pointer-events: none; box-shadow: inset 0 0 160px rgba(220,38,38,0); transition: box-shadow .25s; }
+    #protect { position: absolute; top: 62%; left: 50%; transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: rgba(56,189,248,.18); border: 1px solid #38bdf8; color: #bae6fd; font-size: 15px; font-weight: 600; }
+    #relock { position: fixed; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 7vh; background: rgba(11,8,24,.25); cursor: pointer; }
+    #relock .card { width: auto; text-align: center; padding: 16px 22px; }
+    #relock button { margin-top: 10px; }
     #banner { position: absolute; top: 28%; left: 50%; transform: translateX(-50%); font-size: 46px; font-weight: 700; text-shadow: 0 4px 0 #000; opacity: 0; transition: opacity .3s; white-space: nowrap; }
     .overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(11,8,24,.78); }
     .card { background: #241b45; border: 1px solid var(--line); border-radius: 18px; padding: 28px; width: min(720px, 92vw); box-shadow: 0 20px 50px rgba(0,0,0,.4); }
@@ -59,6 +63,7 @@
   <div id="crosshair"></div>
   <div id="hitmark"></div>
   <div id="banner"></div>
+  <div id="protect" class="hidden">Protégé · tire ou frappe pour entrer dans le combat</div>
   <div id="topLeft" class="panel"><span id="fps">— img/s</span> · Prototype FPS</div>
   <div id="style" class="panel" style="right:16px;top:150px;text-align:right;min-width:190px;opacity:0;transition:opacity .2s">
     <div class="row" style="justify-content:flex-end;gap:10px"><span id="styleName" class="lbl">Destructeur</span><span id="styleLetter" class="big" style="font-size:44px;line-height:1">D</span></div>
@@ -84,6 +89,11 @@
 </div>
 <div id="damage"></div>
 
+<div id="relock" class="hidden">
+  <div class="card"><b>Clique dans le jeu pour reprendre la souris</b>
+    <div class="muted" style="font-size:14px">Le jeu continue en attendant.</div>
+    <button id="relockMenu" class="btn">Réglages (sensibilité…)</button></div>
+</div>
 <div id="menu" class="overlay">
   <div class="card">
     <h1>Prototype FPS</h1>

@@ -22,7 +22,9 @@ const HP = 100;
 const DMG = { body: 34, head: 68, punch: 40, rocketMax: 90 };
 const RATE = { revolver: 280, rocket: 800, punch: 400 };   // ms minimum entre deux actions (≈ cadence du jeu)
 const ARENA = 30;                // demi-taille de l'arène (m), identique à game.js
-const INVULN_MS = 1500;
+const PROTECT_MS = 4000;         // protection après chaque retour dans l'arène (finit dès qu'on attaque)
+const MENU_PROTECT_MAX = 30000;  // réglages ouverts pendant la protection : invisible, au plus 30 s
+const STUN_DELAY = 1500;         // temps entre « Étourdi » et la question (évite les clics réflexes)
 // points d'apparition dégagés (pas collés aux passerelles des coins (-22,-22) et (22,22))
 const SPAWNS = [[26, -26], [-26, 26], [0, -26], [0, 26], [-26, 0], [26, 0],
   [-12, -27], [12, 27], [-27, -10], [27, 10], [-24, 18], [24, -18]];
@@ -103,7 +105,7 @@ class FpsSession extends Session {
     }
   }
   onLateJoin(p) { this.startQuiz(p, this.freq.burst, 'burst'); }
-  onRejoin(p) { p.spawned = false; this.startQuiz(p, 1, 'burst'); }
+  onRejoin(p) { p.spawned = false; p.reviveAt = 0; p.guard = false; this.startQuiz(p, 1, 'burst'); }
 
   onAnswer(p, { correct }) {
     const g = correct ? GAIN.correct : (this.settings.accommodations ? GAIN.wrongAcc : GAIN.wrong);
@@ -141,10 +143,13 @@ class FpsSession extends Session {
       // en PvP : réapparition après un étourdissement (ou à la première entrée)
       if (p.pendingRevive || !p.spawned) {
         const [x, z] = this.spawnPoint(p);
-        Object.assign(p, { x, y: 0, z, yaw: Math.atan2(x, z), hp: HP, spawned: true, invulnUntil: Date.now() + INVULN_MS });
+        Object.assign(p, { x, y: 0, z, yaw: Math.atan2(x, z), hp: HP, spawned: true });
         out.spawn = { x, y: 0, z, yaw: p.yaw };
         out.revive = true;
       }
+      // après chaque série de questions : quelques secondes protégé (le temps de se repérer / régler la souris)
+      p.invulnUntil = Date.now() + PROTECT_MS;
+      p.guard = false;
       out.hp = p.hp;
     } else {
       out.revive = p.pendingRevive;
@@ -165,8 +170,15 @@ class FpsSession extends Session {
   }
 
   canHit(attacker, target) {
-    return target && target !== attacker && target.state === 'play' && Date.now() >= target.invulnUntil;
+    return target && target !== attacker && target.state === 'play' && target.hp > 0 && !target.guard
+      && !target.reviveAt && Date.now() >= target.invulnUntil;
   }
+
+  // attaquer met fin à sa propre protection
+  attacked(p) { p.invulnUntil = 0; p.guard = false; }
+
+  // étourdi : la question arrive un peu plus tard (update)
+  stun(p) { p.reviveAt = Date.now() + STUN_DELAY; }
 
   damage(target, amount, attacker, push) {
     if (!this.canHit(attacker, target) || amount <= 0) return;
@@ -179,11 +191,17 @@ class FpsSession extends Session {
     attacker.kills++;
     this.emitAll('feed', { a: attacker.name, ac: attacker.color, v: target.name, vc: target.color });
     this.emitTo(attacker, 'you:scored', { stuns: attacker.kills, victim: target.name });
-    this.startQuiz(target, 1, 'revive');
+    this.stun(target);
   }
 
   pvpAction(p, type, data) {
     const now = Date.now();
+    if (type === 'guard') {
+      // menu des réglages ouvert : invisible et intouchable, seulement si on était encore protégé
+      if (data.on && (now < p.invulnUntil || p.guard)) { p.guard = true; p.guardUntil = now + MENU_PROTECT_MAX; }
+      else if (!data.on && p.guard) { p.guard = false; p.invulnUntil = now + 1500; }
+      return;
+    }
     if (type === 'pos') {
       const x = Math.max(-ARENA, Math.min(ARENA, num(data.x, p.x)));
       const z = Math.max(-ARENA, Math.min(ARENA, num(data.z, p.z)));
@@ -199,6 +217,7 @@ class FpsSession extends Session {
       if (p.ammo[0] <= 0 || now - p.last.shoot < RATE.revolver - 60) return;
       p.last.shoot = now;
       p.ammo[0]--;
+      this.attacked(p);
       const t = data.hit ? this.findTarget(data.hit) : null;
       if (t && this.canHit(p, t) && dist3(p, t) < 90) this.damage(t, data.head ? DMG.head : DMG.body, p);
       const e = Array.isArray(data.e) ? data.e.slice(0, 3).map(v => num(v)) : null;
@@ -209,6 +228,7 @@ class FpsSession extends Session {
       if (p.ammo[1] <= 0 || now - p.last.rocket < RATE.rocket - 80) return;
       p.last.rocket = now;
       p.ammo[1]--;
+      this.attacked(p);
       p.rocketsInFlight = (p.rocketsInFlight || 0) + 1;
       const o = Array.isArray(data.o) ? data.o.map(v => num(v)) : [p.x, p.y + 1.5, p.z];
       const dir = Array.isArray(data.d) ? data.d.map(v => num(v)) : [0, 0, -1];
@@ -237,6 +257,7 @@ class FpsSession extends Session {
     if (type === 'punch') {
       if (now - p.last.punch < RATE.punch - 60) return;
       p.last.punch = now;
+      this.attacked(p);
       const t = this.findTarget(data.id);
       if (t && this.canHit(p, t) && dist3(p, t) < 3.6) {
         const dx = t.x - p.x, dz = t.z - p.z, l = Math.hypot(dx, dz) || 1;
@@ -252,6 +273,7 @@ class FpsSession extends Session {
       return;
     }
     if ((type === 'empty' || type === 'reload') && p.state === 'play') { this.startQuiz(p, 2, 'reload'); return; }
+    if (p.reviveAt) return;      // étourdi, en attente de la question
     if (this.pvp) { if (p.state === 'play') this.pvpAction(p, type, data); return; }
 
     // mode robots
@@ -264,7 +286,7 @@ class FpsSession extends Session {
       this.emitAll('feed', { a: p.name, ac: p.color, v: data.head ? 'un robot (tête)' : 'un robot', vc: '#9ca3af' });
     } else if (type === 'down' && p.state === 'play') {
       p.downs++;
-      this.startQuiz(p, 1, 'revive');
+      this.stun(p);
     }
   }
 
@@ -273,9 +295,17 @@ class FpsSession extends Session {
       this.nextBurstAt = now + this.freq.every;
       if (this.endAt - now > 20000) {
         for (const p of this.players.values()) {
-          if (p.connected && p.state === 'play') this.startQuiz(p, this.freq.burst, 'burst');
+          if (p.connected && p.state === 'play' && !p.reviveAt) this.startQuiz(p, this.freq.burst, 'burst');
         }
       }
+    }
+    for (const p of this.players.values()) {
+      if (p.reviveAt && now >= p.reviveAt) {
+        p.reviveAt = 0;
+        if (p.state === 'play') this.startQuiz(p, 1, 'revive');
+        else p.pendingRevive = true;      // déjà dans des questions : il réapparaîtra à la fin
+      }
+      if (p.guard && now > p.guardUntil) { p.guard = false; p.invulnUntil = 0; }
     }
     if (this.pvp) {
       // régénération identique à celle du jeu : +10 PV/s après 3 s sans être touché
@@ -287,7 +317,7 @@ class FpsSession extends Session {
     if (this.pvp && this.tickCount % 2 === 0) {
       const ps = [];
       for (const p of this.players.values()) {
-        if (p.state !== 'play') continue;
+        if (p.state !== 'play' || p.guard) continue;
         ps.push({
           i: p.id, x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2),
           w: +p.yaw.toFixed(3), t: +p.pitch.toFixed(2), sl: p.sl, h: Math.round(p.hp), v: now < p.invulnUntil ? 1 : 0,

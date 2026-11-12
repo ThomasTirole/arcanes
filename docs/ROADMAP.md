@@ -9,6 +9,8 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 
 ## Prochaines étapes
 
+- [ ] **Assets et nouvelle direction artistique** (session 7 : à démarrer) — Tirtho fournit des assets, on adapte
+      couleurs, police et icônes de toute l'appli en fonction
 - [x] **[fait]** Mise à jour par « Build » + « Run » (la construction récupère le code sur GitHub) (session 4)
 - [ ] **[idée]** Retenter un vrai déploiement automatique plus tard (API Infomaniak, ou demander au support pourquoi le SSH depuis GitHub est refusé)
 - [ ] Tester l'Arène en vraie classe (réseau de l'école, 20+ élèves) et régler l'équilibrage
@@ -37,15 +39,15 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
   - [x] **[fait]** PvP « chacun pour soi » dans la même arène, réglage « Mode de jeu » au lancement,
         serveur juge des dégâts, carte vue du dessus pour le prof (session 6)
   - [x] **[fait]** Premier test du PvP en classe (10 nov. 2026) — retours à corriger :
-    - [ ] **Spawnkill** : les élèves se font étourdir juste après la réapparition (invulnérabilité trop
+    - [x] **[fait]** **Spawnkill** (session 7 : 4 s de protection après chaque retour, finie dès qu'on attaque) : les élèves se font étourdir juste après la réapparition (invulnérabilité trop
           courte ? apparition en vue des autres ? protéger tant qu'on n'a pas bougé / tiré)
-    - [ ] **Délai après un étourdissement** avant la question : ils cliquent par réflexe sur une réponse
+    - [x] **[fait]** **Délai après un étourdissement** (session 7 : question 1,5 s après, réponses bloquées 0,9 s) avant la question : ils cliquent par réflexe sur une réponse
           (bloquer les clics 1-2 s, ou afficher « Étourdi par X » avant d'ouvrir la question)
-    - [ ] **Temps pour régler la sensibilité** : pouvoir ouvrir les réglages sans se faire tirer dessus
+    - [x] **[fait]** **Temps pour régler la sensibilité** (session 7 : réglages ouverts pendant la protection = invisible, 30 s max) : pouvoir ouvrir les réglages sans se faire tirer dessus
           (réglages avant le départ, ou invulnérable / caché tant que le menu est ouvert)
-    - [ ] **Alt+Tab** : au retour, le menu des réglages réapparaît (la souris est libérée) — reprendre
+    - [x] **[fait]** **Alt+Tab** (session 7 : petit bandeau « clique pour reprendre », le jeu continue) : au retour, le menu des réglages réapparaît (la souris est libérée) — reprendre
           directement d'un clic dans le jeu
-    - [ ] **Sortie de la carte avec des sauts muraux** : murs d'enceinte trop bas ou collision ratée ;
+    - [x] **[fait]** **Sortie de la carte avec des sauts muraux** (session 7 : murs invisibles jusqu'au ciel + limite de position) : murs d'enceinte trop bas ou collision ratée ;
           plafond invisible + le serveur ramène dans l'arène
   - [ ] Coop : toute la classe contre des vagues de robots dans la même arène
   - [ ] **[idée]** Spectateur PvP : cliquer un joueur sur la carte pour voir sa vue / le suivre

@@ -23,6 +23,8 @@
       canSkip = false;
       socket.emit('player:continue');
     }
+    const OPEN_GUARD_MS = 900;
+    let guardUntil = 0;
     const mode = () => (opts.getMode && opts.getMode()) || {};
 
     socket.on('quiz:question', data => {
@@ -31,6 +33,8 @@
       selected = new Set();
       locked = false;
       canSkip = false;
+      // la fenêtre surgit en plein jeu : on ignore les clics réflexes pendant un court instant
+      if (!open) guardUntil = performance.now() + OPEN_GUARD_MS;
       if (!open && mode().onQuizOpen) mode().onQuizOpen();
       open = true;
       $('#quiz').classList.remove('hidden');
@@ -47,6 +51,10 @@
       }
       const box = $('#qChoices');
       box.classList.remove('locked');
+      if (performance.now() < guardUntil) {
+        box.classList.add('waiting');
+        setTimeout(() => box.classList.remove('waiting'), guardUntil - performance.now());
+      }
       box.replaceChildren(...data.choices.map((c, i) =>
         el('button', { class: 'choice', onclick: () => pick(i) }, el('span', { class: 'n' }, String(i + 1)), c)));
       refreshHeader();
@@ -66,7 +74,7 @@
     }
 
     function pick(i) {
-      if (locked || !q) return;
+      if (locked || !q || performance.now() < guardUntil) return;
       if (q.multi) {
         if (selected.has(i)) selected.delete(i); else selected.add(i);
         [...$('#qChoices').children].forEach((b, k) => b.classList.toggle('selected', selected.has(k)));
@@ -94,6 +102,7 @@
         if (q && i < q.choices.length) { e.preventDefault(); pick(i); }
       } else if (e.code === 'Enter' || e.code === 'NumpadEnter') {
         e.preventDefault();
+        if (performance.now() < guardUntil || e.repeat) return;   // Entrée sert aussi à tirer
         if (locked) skip(); else submit();
       }
     });

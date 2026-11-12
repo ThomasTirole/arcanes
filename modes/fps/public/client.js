@@ -88,7 +88,7 @@
     };
   }
 
-  const PVP_ACTIONS = ['pos', 'shoot', 'rocket', 'boom', 'punch'];
+  const PVP_ACTIONS = ['pos', 'shoot', 'rocket', 'boom', 'punch', 'guard'];
 
   // Vue du prof : grand classement en direct (+ carte vue du dessus en PvP)
   function createSpectator(ctx) {

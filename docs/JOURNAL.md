@@ -5,6 +5,31 @@ Les plus récentes en haut.
 
 ---
 
+## Session 7 — 12 novembre 2026 · Retours du premier test PvP en classe
+
+**Décisions**
+- **Protection** de 4 s après chaque retour dans l'arène (pas seulement après un étourdissement : après une
+  série de questions aussi), qui s'arrête dès qu'on tire ou frappe. Plus efficace qu'une durée fixe courte.
+- **Réglages en jeu** : ouvrir le menu pendant cette protection rend invisible et intouchable (30 s max) ;
+  en plein combat, le menu ne protège pas (sinon on s'en servirait pour fuir).
+- **Étourdi** : la question arrive 1,5 s après (le temps de lire « Étourdi par X »), et la fenêtre de
+  questions ignore clics, chiffres et Entrée pendant 0,9 s à l'ouverture (vaut pour tous les jeux).
+- **Souris libérée** (Alt+Tab, Échap) : plus de grand menu ; un petit bandeau « clique pour reprendre »,
+  avec un bouton Réglages. Le jeu continue.
+- **Bords de la carte** : murs invisibles au-dessus de l'enceinte + le joueur est ramené dans l'arène s'il
+  en sort quand même (le serveur bornait déjà la position).
+
+**Réalisé**
+- `modes/fps/server.js` (protection, action `guard`, étourdissement différé y compris en mode robots),
+  `game.js` / `index.html` (bandeau de reprise, indicateur « Protégé », murs invisibles), `public/js/quiz.js`
+  (anti-clic réflexe). Tests : `npm test` + test PvP à 2 joueurs (protection, invisibilité pendant les
+  réglages, délai avant la question) + bandeau vérifié dans Chrome. v0.7.1.
+
+**Reste ouvert**
+- Assets et nouvelle direction artistique (couleurs, police, icônes) selon ce que Tirtho apporte.
+
+---
+
 ## Session 6 — 10 novembre 2026 · FPS chacun pour soi (PvP)
 
 **Décisions**

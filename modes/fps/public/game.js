@@ -130,6 +130,10 @@ const ARENA = 30;   // demi-taille de l'arène
   addBox(0, 0, ARENA + 0.5, ARENA * 2 + 2, H, 1, mats.wall);
   addBox(-ARENA - 0.5, 0, 0, 1, H, ARENA * 2, mats.wall);
   addBox(ARENA + 0.5, 0, 0, 1, H, ARENA * 2, mats.wall);
+  // murs invisibles au-dessus de l'enceinte : impossible d'en sortir en enchaînant les sauts muraux
+  for (const [x, z, w, d] of [[0, -ARENA - 0.5, ARENA * 2 + 2, 1], [0, ARENA + 0.5, ARENA * 2 + 2, 1], [-ARENA - 0.5, 0, 1, ARENA * 2], [ARENA + 0.5, 0, 1, ARENA * 2]]) {
+    boxes.push({ min: new THREE.Vector3(x - w / 2, H, z - d / 2), max: new THREE.Vector3(x + w / 2, 200, z + d / 2) });
+  }
 
   // plateforme centrale + escaliers
   addBox(0, 0, 0, 10, 2.4, 10, mats.stone);
@@ -361,6 +365,11 @@ function updatePlayer(dt, now) {
   p.fovKick += (fovTarget - p.fovKick) * Math.min(1, dt * 8);
   camera.fov = settings.fov + p.fovKick;
   camera.updateProjectionMatrix();
+  // filet de sécurité : jamais hors de l'enceinte
+  const lim = ARENA - P.radius;
+  if (Math.abs(p.pos.x) > lim) { p.pos.x = Math.sign(p.pos.x) * lim; p.vel.x = 0; }
+  if (Math.abs(p.pos.z) > lim) { p.pos.z = Math.sign(p.pos.z) * lim; p.vel.z = 0; }
+  if (p.pos.y < -3) { p.pos.set(0, 2.5, 10); p.vel.set(0, 0, 0); }
   camera.position.set(p.pos.x, p.pos.y + p.eyeH + bobY, p.pos.z);
   camera.rotation.set(0, 0, 0);
   camera.rotateY(p.yaw);
@@ -460,6 +469,7 @@ function punch(now) {
   }
   if (PVP) {
     const t = remoteInFront(origin, dir, P.punchRange + 0.5, 0.55);
+    protectedUntil = 0;
     if (t) { toParent({ t: 'punch', id: t.id }); burst(t.center(), 0xe5e7eb, 6, 5); hitSomething = true; }
   }
   if (hitSomething) { shake(0.15); p.kick -= 0.02; }
@@ -575,7 +585,8 @@ function fire(now) {
     }
     const end = origin.clone().addScaledVector(dir, hitD);
     tracer(muzzle, end, 0xfde68a);
-    if (PVP) toParent({ t: 'shoot', hit: rhit ? rhit.id : 0, head: rhit ? rhit.head : false, e: [end.x, end.y, end.z].map(v => +v.toFixed(2)) });
+    if (PVP) protectedUntil = 0;
+  if (PVP) toParent({ t: 'shoot', hit: rhit ? rhit.id : 0, head: rhit ? rhit.head : false, e: [end.x, end.y, end.z].map(v => +v.toFixed(2)) });
     if (rhit) {
       burst(end, rhit.head ? 0xfde047 : 0xe5e7eb, rhit.head ? 10 : 6, 5);
     } else if (hit) {
@@ -588,7 +599,7 @@ function fire(now) {
     scene.add(m);
     const k = ++rocketSeq;
     rockets.push({ mesh: m, vel: dir.clone().multiplyScalar(w.speed), born: now, trail: 0, k });
-    if (PVP) toParent({ t: 'rocket', k, o: [muzzle.x, muzzle.y, muzzle.z].map(v => +v.toFixed(2)), d: [dir.x, dir.y, dir.z].map(v => +v.toFixed(3)) });
+    if (PVP) { protectedUntil = 0; toParent({ t: 'rocket', k, o: [muzzle.x, muzzle.y, muzzle.z].map(v => +v.toFixed(2)), d: [dir.x, dir.y, dir.z].map(v => +v.toFixed(3)) }); }
   }
 }
 let rocketSeq = 0;
@@ -1013,6 +1024,11 @@ const dashBars = [...document.querySelectorAll('#dash i')];
 const speedEl = document.getElementById('speed'), fpsEl = document.getElementById('fps');
 let fpsFrames = 0, fpsTime = 0;
 function updateHud(dt) {
+  if (PVP) {
+    const prot = performance.now() < protectedUntil;
+    const el = document.getElementById('protect');
+    if (el.classList.contains('hidden') === prot) el.classList.toggle('hidden', !prot);
+  }
   hpBar.style.width = `${player.hp}%`;
   hpBar.style.background = player.hp > 50 ? 'linear-gradient(90deg,#22c55e,#86efac)' : player.hp > 25 ? '#eab308' : '#ef4444';
   hpText.textContent = Math.ceil(player.hp);
@@ -1049,14 +1065,22 @@ document.getElementById('play').addEventListener('click', () => {
   setTimeout(() => { if (!locked) document.getElementById('menuHint').textContent = 'Souris non capturée : clique dans le jeu, ou joue au clavier (flèches + F).'; }, 400);
 });
 canvas.addEventListener('click', () => { if (started && !locked && menu.classList.contains('hidden')) requestLock(); });
+// Souris libérée (Échap, Alt+Tab, notification…) : le jeu continue, un simple clic la reprend.
+// Les réglages ne s'ouvrent que si on les demande (bouton ou 2e Échap).
+const relock = document.getElementById('relock');
+function showRelock(on) { relock.classList.toggle('hidden', !on); }
 document.addEventListener('pointerlockchange', () => {
   locked = document.pointerLockElement === canvas;
-  if (!locked && started) {
-    // Échap : pause
+  if (locked) { showRelock(false); return; }
+  mouseDown = false;
+  if (started && menu.classList.contains('hidden') && !embedPaused) showRelock(true);
+});
+relock.addEventListener('click', e => {
+  if (e.target.closest('#relockMenu')) {
+    showRelock(false);
     menu.classList.remove('hidden');
     document.getElementById('play').textContent = 'Reprendre';
-    mouseDown = false;
-  }
+  } else { showRelock(false); requestLock(); }
 });
 document.addEventListener('mousemove', e => {
   if (!locked) return;
@@ -1085,7 +1109,7 @@ document.addEventListener('keydown', e => {
   if (e.code === 'KeyC' && !e.repeat && !player.onGround && player.alive && player.dashT <= 0) player.slamming = true;
   if (e.code === 'KeyR' && !player.alive && !EMBED) restart();
   if (e.code === 'KeyR' && EMBED && player.alive) toParent({ t: 'reload' });
-  if (e.code === 'Escape' && !locked && started) { menu.classList.remove('hidden'); document.getElementById('play').textContent = 'Reprendre'; }
+  if (e.code === 'Escape' && !locked && started) { showRelock(false); menu.classList.remove('hidden'); document.getElementById('play').textContent = 'Reprendre'; }
 });
 document.addEventListener('keyup', e => { keys[e.code] = false; });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; mouseDown = false; });
@@ -1300,7 +1324,7 @@ function onPvpMessage(m) {
 }
 
 // ------------------------------------------------------------------ intégration dans une partie Arcanes
-let lastSpawn = null;
+let lastSpawn = null, protectedUntil = 0;
 function revive(spawn) {
   if (spawn) lastSpawn = spawn;
   for (const sh of enemyShots) scene.remove(sh.mesh);
@@ -1331,11 +1355,13 @@ if (EMBED) {
     const m = ev.data;
     if (m.t === 'pause') {
       embedPaused = true;
+      showRelock(false);
       for (const k in keys) keys[k] = false;
       mouseDown = false;
       if (document.pointerLockElement) document.exitPointerLock();
     } else if (m.t === 'resume') {
       embedPaused = false;
+      if (PVP) protectedUntil = performance.now() + 4000;
       if (!started) { started = true; restart(); }
       menu.classList.remove('hidden');      // un clic est nécessaire pour reprendre la souris
       document.getElementById('play').textContent = 'Reprendre';
@@ -1358,6 +1384,14 @@ if (EMBED) {
       document.getElementById('play').click();
     }
   });
+  if (PVP) {
+    // réglages ouverts juste après le retour dans l'arène : le serveur nous rend invisible
+    let guardOn = false;
+    new MutationObserver(() => {
+      const open = !menu.classList.contains('hidden') && started && !embedPaused;
+      if (open !== guardOn) { guardOn = open; toParent({ t: 'guard', on: open }); }
+    }).observe(menu, { attributes: true, attributeFilter: ['class'] });
+  }
   toParent({ t: 'ready' });
 }
 

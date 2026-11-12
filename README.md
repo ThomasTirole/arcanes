@@ -101,8 +101,10 @@ Dans les deux cas, le serveur gère les questions, les munitions, le classement 
 
 **PvP** : 100 points d'énergie, revolver 34 (tête 68), roquette jusqu'à 90 avec poussée, poing 40.
 Le navigateur de chaque élève calcule son propre déplacement et annonce ses touches ; **le serveur
-décide** (munitions, cadence de tir, distance, invulnérabilité de 1,5 s à la réapparition, régénération
-après 3 s). Après une question, l'élève réapparaît au point le plus éloigné des autres. Vue prof : **carte
+décide** (munitions, cadence de tir, distance, protection au retour, régénération
+après 3 s). Après un étourdissement, l'élève réapparaît au point le plus éloigné des autres. Après chaque
+retour dans l'arène, il est **protégé 4 s** (fini dès qu'il attaque) ; ouvrir les réglages pendant ce temps
+le rend invisible. Souris libérée (Alt+Tab) : un clic dans le jeu suffit pour reprendre. Vue prof : **carte
 de l'arène vue du dessus** (joueurs, regard, énergie, tirs, explosions) + classement en direct.
 En mode robots, vue prof = grand classement en barres.
 
