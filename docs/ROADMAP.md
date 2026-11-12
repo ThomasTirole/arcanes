@@ -14,6 +14,17 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 - [ ] Vérifier les performances du FPS médiéval sur les PC de l'école
 - [x] **[fait]** DA « manuscrit enluminé » : vélin sur pierre, gothique, lettrines, bannières héraldiques, polices embarquées (session 9)
 - [ ] Comprendre l'erreur « got '<' » vue en ligne sur la vue élève du FPS (session 9 : contournée, cause inconnue)
+- [ ] **Retours test du 12 nov. (Tirtho)** :
+  - [ ] **Brave (navigation privée)** : « Impossible de charger /modes/fps/client.js » au moment de rejoindre
+        (Firefox OK). Piste : les boucliers / listes anti-pub de Brave bloquent l'URL → renommer le fichier
+        (ex. `jeu.js`) ou le servir autrement, et afficher un message clair « désactive les boucliers »
+  - [ ] **Après chaque série de questions**, le menu des commandes / réglages du FPS revient au premier plan :
+        le remplacer par le petit bandeau « clique pour reprendre » (le menu complet seulement au premier départ)
+  - [ ] **Épée au corps à corps** pas terrible (visuel et sensation du coup) : à retravailler
+  - [ ] **Bâton de feu** : c'était un lance-roquettes → il faut une **grosse boule de feu** bien visible
+        (taille, flammes, traînée, explosion plus forte)
+  - [ ] **[idée]** Remettre de « vraies » armes plus tard (pack Kenney *Blaster Kit* ?), « ça peut être drôle » —
+        par exemple un réglage de thème d'armes au lancement
 - [ ] Arène 2D dans le thème médiéval (fond, sorts, personnages vus du dessus)
 - [ ] **[idée]** Choix de son personnage (classe) par l'élève avant la partie
 - [ ] **[idée]** Armes : arbalète, autres bâtons ; le pack Kenney *Blaster Kit* (science-fiction) reste de côté

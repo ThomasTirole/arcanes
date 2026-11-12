@@ -27,6 +27,10 @@ Les plus récentes en haut.
 
 **Reste ouvert**
 - Savoir quel fichier renvoyait du HTML chez Tirtho (nom du fichier dans la console, navigateur).
+- Retours du test du 12 nov. notés dans la roadmap (pour une prochaine session) : Brave en navigation privée
+  ne charge pas `/modes/fps/client.js` (Firefox OK) ; le menu des commandes du FPS revient après chaque série
+  de questions ; épée peu convaincante ; bâton de feu = il faut une grosse boule de feu ; armes « modernes »
+  peut-être plus tard. Tirtho aime la DA « manuscrit » des captures.
 - Arène 2D dans le même thème.
 
 ---
