@@ -67,16 +67,16 @@
       },
       onStart() { kills = 0; send({ t: 'reset' }); },
       reasons: {
-        burst: ['Quiz : gagne des munitions', '#fde68a'],
+        burst: ['Quiz : recharge tes bâtons', '#fde68a'],
         revive: ['Étourdi ! Réponds pour revenir', '#fca5a5'],
-        reload: ['Plus de munitions : recharge', '#93c5fd'],
+        reload: ['Bâtons vides : recharge', '#93c5fd'],
       },
       onQuizOpen() {
         flushAmmo();
         send({ t: 'pause' });
         try { frame.blur(); window.focus(); } catch (e) { /* rien */ }
       },
-      quizHeader: () => el('span', { class: 'pill' }, ctx.ui.icon('burst', { size: 16, color: '#fde047' }), pvp ? ` ${kills} étourdis` : ` ${kills} robots`),
+      quizHeader: () => el('span', { class: 'pill' }, ctx.ui.icon('burst', { size: 16, color: '#fde047' }), pvp ? ` ${kills} étourdis` : ` ${kills} brigands`),
       onQuizResult(res) { if (res.ammo) send({ t: 'ammo', ammo: res.ammo }); },
       onQuizDone(res) {
         if (res.ammo) send({ t: 'ammo', ammo: res.ammo });
@@ -98,7 +98,7 @@
     const board = el('div', { class: 'fps-board' });
     const feed = el('div', { class: 'feed', style: 'top:12px' });
     root.replaceChildren(el('div', { class: 'fps-spec' },
-      el('div', { class: 'fps-spec-title' }, ctx.ui.icon('bolt', { size: 26, color: '#a78bfa' }), 'Robots étourdis'), board), feed);
+      el('div', { class: 'fps-spec-title' }, ctx.ui.icon('castle', { size: 26, color: '#e3b04b' }), 'Brigands étourdis'), board), feed);
     socket.on('host:stats', rows => {
       const sorted = [...rows].sort((a, b) => b.kills - a.kills || b.correct - a.correct);
       const max = Math.max(1, ...sorted.map(r => r.kills));
@@ -167,10 +167,10 @@
       const X = x => ox + x * k, Z = z => oz + z * k;
       g.clearRect(0, 0, W, H);
       // sol + enceinte
-      g.fillStyle = '#2a2350'; g.fillRect(X(-ARENA), Z(-ARENA), size, size);
-      g.strokeStyle = '#8b7fd6'; g.lineWidth = 4 * dpr; g.strokeRect(X(-ARENA), Z(-ARENA), size, size);
+      g.fillStyle = '#6b5a45'; g.fillRect(X(-ARENA), Z(-ARENA), size, size);
+      g.strokeStyle = '#b4492f'; g.lineWidth = 6 * dpr; g.strokeRect(X(-ARENA), Z(-ARENA), size, size);
       for (const [x, z, w, d, h] of LEVEL) {
-        g.fillStyle = h > 5 ? '#6b5fa8' : h > 2 ? '#4e4390' : '#3e3478';
+        g.fillStyle = h > 5 ? '#3d2f24' : h > 2 ? '#8a7258' : '#7a6650';
         g.fillRect(X(x - w / 2), Z(z - d / 2), w * k, d * k);
       }
       const now = performance.now();

@@ -1,7 +1,7 @@
-// Prototype FPS solo — Arcanes
-// Objectif : régler la sensation de jeu (déplacements nerveux façon Quake / Ultrakill) et mesurer
-// les performances sur les PC de l'école. Pas encore de questions ni de multijoueur.
-import * as THREE from './vendor/three.module.min.js';
+// FPS Arcanes — déplacements nerveux façon Quake / Ultrakill, dans une place de village médiévale.
+// Les collisions sont des boîtes (ce fichier) ; l'apparence (décor, personnages, sons) vient de medieval.js.
+import * as THREE from 'three';
+import * as Med from './medieval.js';
 
 // ?embed=1 : intégré dans une partie Arcanes (munitions données par les questions, échanges avec la page parente)
 const EMBED = new URLSearchParams(location.search).has('embed');
@@ -39,8 +39,8 @@ const P = {
 };
 
 const WEAPONS = [
-  { name: 'Revolver', rate: 0.32, dmg: 40, kick: 0.035, color: 0xfde68a },
-  { name: 'Lance-roquettes', rate: 0.85, dmg: 95, splash: 3.6, speed: 30, kick: 0.06, color: 0xf97316 },
+  { name: 'Bâton de foudre', rate: 0.32, dmg: 40, kick: 0.035, color: 0xbfdbfe },
+  { name: 'Bâton de feu', rate: 0.85, dmg: 95, splash: 3.6, speed: 30, kick: 0.06, color: 0xf97316 },
 ];
 
 const settings = { sens: 1, keyTurn: 2.2, fov: 90, quality: 0.75 };
@@ -50,8 +50,8 @@ try { Object.assign(settings, JSON.parse(localStorage.getItem('arcanes-fps') || 
 const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
 document.body.prepend(renderer.domElement);
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x2a1f4d);
-scene.fog = new THREE.Fog(0x2a1f4d, 30, 90);
+scene.background = new THREE.Color(0x9cc3e4);     // ciel de fin d'après-midi
+scene.fog = new THREE.Fog(0xc9d8e6, 40, 110);
 const camera = new THREE.PerspectiveCamera(settings.fov, 1, 0.05, 200);
 scene.add(camera);
 
@@ -65,8 +65,8 @@ function applyQuality() {
 window.addEventListener('resize', applyQuality);
 applyQuality();
 
-scene.add(new THREE.HemisphereLight(0xc4b5fd, 0x3b2f2f, 1.1));
-const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+scene.add(new THREE.HemisphereLight(0xfff1dc, 0x5b4a3a, 1.5));
+const sun = new THREE.DirectionalLight(0xffe7c2, 1.9);
 sun.position.set(20, 40, 12);
 scene.add(sun);
 
@@ -99,10 +99,13 @@ const mats = {
   pad: new THREE.MeshBasicMaterial({ color: 0x67e8f9 }),
 };
 
+let levelFloor = null;
+const levelParts = [];   // pour l'habillage médiéval
 function addBox(x, y, z, w, h, d, mat = mats.stone) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
   mesh.position.set(x, y + h / 2, z);
   scene.add(mesh);
+  levelParts.push({ x, y, z, w, h, d, mesh, kind: Object.keys(mats).find(k => mats[k] === mat) || 'stone' });
   boxes.push({ min: new THREE.Vector3(x - w / 2, y, z - d / 2), max: new THREE.Vector3(x + w / 2, y + h, z + d / 2) });
   return mesh;
 }
@@ -122,6 +125,7 @@ const ARENA = 30;   // demi-taille de l'arène
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(ARENA * 2, ARENA * 2), new THREE.MeshLambertMaterial({ map: floorTex }));
   floor.rotation.x = -Math.PI / 2;
   scene.add(floor);
+  levelFloor = floor;
   boxes.push({ min: new THREE.Vector3(-ARENA - 5, -5, -ARENA - 5), max: new THREE.Vector3(ARENA + 5, 0, ARENA + 5) });
 
   // murs d'enceinte
@@ -426,7 +430,47 @@ const arm = new THREE.Group();
   const fist = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.15, 0.17), skin); fist.position.z = -0.1; arm.add(fist);
 }
 camera.add(arm);
-let punchAnim = 0;
+let punchAnim = 0, swordMode = false;
+
+// met un modèle à la bonne taille, son grand axe pointé vers l'avant (-z)
+function fitModel(obj, length) {
+  const box = new THREE.Box3().setFromObject(obj);
+  const size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+  obj.position.sub(c);
+  const holder = new THREE.Group();
+  const axis = size.x > size.y && size.x > size.z ? 'x' : size.y > size.z ? 'y' : 'z';
+  const inner = new THREE.Group();
+  inner.add(obj);
+  if (axis === 'x') inner.rotation.y = Math.PI / 2;
+  if (axis === 'y') inner.rotation.x = -Math.PI / 2;
+  inner.scale.setScalar(length / Math.max(size.x, size.y, size.z));
+  holder.add(inner);
+  return holder;
+}
+
+// armes médiévales : bâtons du magicien et du clerc, épée du guerrier
+function medievalWeapons() {
+  const looks = [['Wizard', 'Wizard_Staff', 1.25], ['Cleric', 'Cleric_Staff', 1.15]];
+  looks.forEach(([cls, node, len], i) => {
+    const m = Med.weaponModel(cls, node);
+    if (!m) return;
+    const staff = fitModel(m, len);
+    staff.rotation.set(0.12, 0.05, -0.12);
+    staff.position.set(0.02, -0.1, -0.2);
+    gunParts[i].children.forEach(c => { c.visible = false; });
+    gunParts[i].scale.setScalar(1);
+    gunParts[i].add(staff);
+  });
+  const sword = Med.weaponModel('Warrior', 'Warrior_Sword');
+  if (sword) {
+    arm.children.forEach(c => { c.visible = false; });
+    const s = fitModel(sword, 1.0);
+    s.position.z = -0.35;
+    arm.add(s);
+    swordMode = true;
+  }
+  flash.position.set(0, 0.05, -0.85);
+}
 
 function punch(now) {
   const p = player;
@@ -501,7 +545,12 @@ function updateGun(dt) {
   punchAnim = Math.max(0, punchAnim - dt * 4);
   const ext = Math.sin(Math.min(1, (1 - punchAnim) * 1.6) * Math.PI);
   arm.visible = punchAnim > 0;
-  arm.position.set(-0.28 + ext * 0.12, -0.3 + ext * 0.08, -0.45 - ext * 0.35);
+  if (swordMode) {
+    // coup d'épée : balayage de droite à gauche
+    const k = 1 - punchAnim;
+    arm.position.set(0.35 - k * 0.7, -0.28 + ext * 0.1, -0.55);
+    arm.rotation.set(-0.2, 0.9 - k * 1.8, -0.9 + k * 0.5);
+  } else arm.position.set(-0.28 + ext * 0.12, -0.3 + ext * 0.08, -0.45 - ext * 0.35);
 }
 
 // ------------------------------------------------------------------ tirs
@@ -562,7 +611,7 @@ function fire(now) {
   flash.color.setHex(w.color);
   const origin = camera.getWorldPosition(new THREE.Vector3());
   const dir = aimDir();
-  const muzzle = gun.localToWorld(new THREE.Vector3(0, 0.02, p.weapon ? -0.55 : -0.35));
+  const muzzle = gun.localToWorld(new THREE.Vector3(0, swordMode ? 0.05 : 0.02, swordMode ? -0.8 : (p.weapon ? -0.55 : -0.35)));
   if (p.weapon === 0) {
     sfx('shot');
     const wallD = rayBoxes(origin, dir, 120);
@@ -584,7 +633,7 @@ function fire(now) {
       if (rhit) hitD = rhit.d;
     }
     const end = origin.clone().addScaledVector(dir, hitD);
-    tracer(muzzle, end, 0xfde68a);
+    tracer(muzzle, end, 0x93c5fd);
     if (PVP) protectedUntil = 0;
   if (PVP) toParent({ t: 'shoot', hit: rhit ? rhit.id : 0, head: rhit ? rhit.head : false, e: [end.x, end.y, end.z].map(v => +v.toFixed(2)) });
     if (rhit) {
@@ -672,6 +721,7 @@ function updateRockets(dt, now) {
 
 // ------------------------------------------------------------------ ennemis
 const enemies = [];
+const dying = [];
 const robotMats = {
   body: new THREE.MeshLambertMaterial({ color: 0x9ca3af }),
   eye: new THREE.MeshBasicMaterial({ color: 0xf87171 }),
@@ -679,13 +729,20 @@ const robotMats = {
 };
 const SPAWNS = [[-26, -26], [26, -26], [-26, 26], [26, 26], [0, -27], [0, 27], [-27, 0], [27, 0]];
 
+let enemyCount = 0;
 function makeRobot(x, z, flying) {
   const g = new THREE.Group();
+  let ch = null;
   const mat = new THREE.MeshLambertMaterial({ color: flying ? 0x60a5fa : 0x9ca3af });
   if (flying) {
     const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.55, 0), mat); g.add(core);
     for (const s of [-1, 1]) { const wing = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.06, 0.3), mat); wing.position.x = s * 0.7; g.add(wing); }
     const eye = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), robotMats.eye); eye.position.set(0, 0, -0.5); g.add(eye);
+  } else if (Med.ready.chars) {
+    // brigand : un personnage du pack, dans des tons sombres
+    ch = Med.createCharacter(['Rogue', 'Warrior', 'Monk'][enemyCount++ % 3]);
+    ch.play('Run', 0);
+    g.add(ch.root);
   } else {
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.1, 0.6), mat); body.position.y = 0.95; g.add(body);
     const head = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.45, 0.5), mat); head.position.y = 1.75; g.add(head);
@@ -695,7 +752,7 @@ function makeRobot(x, z, flying) {
   g.position.set(x, flying ? 3.5 + Math.random() * 2 : 0, z);
   scene.add(g);
   const e = {
-    mesh: g, mat, flying, hp: flying ? 60 : 100, alive: true, r: flying ? 0.7 : 0.6,
+    mesh: g, mat, flying, ch, hp: flying ? 60 : 100, alive: true, r: flying ? 0.7 : 0.6,
     center: new THREE.Vector3(0, flying ? 0 : 1, 0), headR: flying ? 0.25 : 0.32,
     nextShot: performance.now() + 1500 + Math.random() * 2000, flashT: 0, vel: new THREE.Vector3(),
     headPos() { return flying ? g.position.clone() : g.position.clone().add(new THREE.Vector3(0, 1.75, 0)); },
@@ -740,7 +797,12 @@ function damageEnemy(e, dmg, at, head, how) {
     burst(c, e.flying ? 0x60a5fa : 0x9ca3af, 22, 8, true);
     burst(c, 0xfde047, 10, 6);
     sfx('kill');
-    scene.remove(e.mesh);
+    if (e.ch) {
+      // le brigand s'effondre puis disparaît
+      e.ch.flash(false);
+      e.ch.once('Death');
+      dying.push({ e, until: performance.now() + 1400 });
+    } else scene.remove(e.mesh);
   }
 }
 
@@ -773,6 +835,11 @@ function updateEnemies(dt, now) {
       e.mesh.children.forEach((c, i) => { if (i >= 3) c.position.z = Math.sin(now / 120 + i * Math.PI) * 0.15; });
     }
     if (e.flashT > 0) { e.flashT -= dt; e.mat.emissive.setHex(0xffffff); } else e.mat.emissive.setHex(0x000000);
+    if (e.ch) {
+      e.ch.flash(e.flashT > 0);
+      e.ch.update(dt);
+      e.ch.play(dist > 4 || (e.kb && e.kb.lengthSq() > 0.5) ? 'Run' : 'Idle_Attacking');
+    }
     // tir
     if (now > e.nextShot && dist < 40 && player.alive) {
       const from = e.headPos();
@@ -782,11 +849,17 @@ function updateEnemies(dt, now) {
         m.position.copy(from);
         scene.add(m);
         enemyShots.push({ mesh: m, vel: d.multiplyScalar(13 + wave * 0.5), born: now });
+        if (e.ch) e.ch.once('Punch', 'Idle_Attacking');
       }
       e.nextShot = now + (e.flying ? 1800 : 2400) + Math.random() * 1200;
     }
   }
   for (let i = enemies.length - 1; i >= 0; i--) if (!enemies[i].alive) enemies.splice(i, 1);
+  for (let i = dying.length - 1; i >= 0; i--) {
+    const d = dying[i];
+    d.e.ch.update(dt);
+    if (now > d.until) { scene.remove(d.e.mesh); d.e.ch.dispose(); dying.splice(i, 1); }
+  }
   if (!enemies.length && started && player.alive) {
     waveTimer += dt;
     if (waveTimer > 2.5) { waveTimer = 0; startWave(); }
@@ -851,8 +924,8 @@ function hurtPlayer(n, fromEnemy) {
 }
 
 function restart() {
-  for (const e of enemies) scene.remove(e.mesh);
-  enemies.length = 0;
+  for (const e of [...enemies, ...dying.map(d => d.e)]) scene.remove(e.mesh);
+  enemies.length = 0; dying.length = 0;
   for (const s of [...enemyShots, ...rockets]) scene.remove(s.mesh);
   enemyShots.length = 0; rockets.length = 0;
   Object.assign(player, { hp: 100, alive: true, dash: P.dashCharges, slamming: false, sliding: false, airJumps: 1, wallJumps: P.wallJumps });
@@ -938,9 +1011,14 @@ function shake(a) { shakeAmt = Math.max(shakeAmt, a); }
 
 // petits sons synthétisés (aucun fichier à télécharger)
 let audio = null;
+const SAMPLE = { punch: ['sword', 0.6], hit: ['hit', 0.45], kill: ['kill', 0.35], parry: ['parry', 0.5], jump: ['jump', 0.35],
+  dash: ['dash', 0.45], slide: ['slide', 0.4], down: ['down', 0.6], step: ['step', 0.18], land: ['land', 0.3] };
+let soundsLoading = false;
 function sfx(kind) {
   try {
     if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+    if (!soundsLoading) { soundsLoading = true; Med.loadSounds(audio).catch(() => {}); }
+    if (SAMPLE[kind] && Med.playSound(audio, SAMPLE[kind][0], SAMPLE[kind][1])) return;
     const t = audio.currentTime;
     const o = audio.createOscillator(), g = audio.createGain();
     o.connect(g); g.connect(audio.destination);
@@ -1141,6 +1219,24 @@ function makeRemote(id) {
   const mat = new THREE.MeshLambertMaterial({ color, transparent: true, opacity: 1 });
   const dark = new THREE.MeshLambertMaterial({ color: color.clone().multiplyScalar(0.55), transparent: true, opacity: 1 });
   const g = new THREE.Group();
+  let ch = null;
+  if (Med.ready.chars) {
+    // personnage du pack (classe choisie par l'identifiant) + anneau à la couleur du joueur
+    ch = Med.createCharacter(Med.CLASSES[id % Med.CLASSES.length]);
+    g.add(ch.root);
+    const ringM = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.62, 24), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, side: THREE.DoubleSide }));
+    ringM.rotation.x = -Math.PI / 2; ringM.position.y = 0.04; g.add(ringM);
+    const label = nameSprite(info.name, info.color); label.position.y = 2.35; g.add(label);
+    scene.add(g);
+    const r = {
+      id, g, ch, buf: [], visible: false, pos: new THREE.Vector3(), yaw: 0, pitch: 0, flashT: 0, speed: 0, dead: false,
+      center() { return this.pos.clone().add(new THREE.Vector3(0, 0.9, 0)); },
+      headPos() { return this.pos.clone().add(new THREE.Vector3(0, 1.6, 0)); },
+    };
+    g.visible = false;
+    remotes.set(id, r);
+    return r;
+  }
   const body = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.42, 1.0, 10), mat); body.position.y = 0.85; g.add(body);
   const legs = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.4, 0.3), dark); legs.position.y = 0.2; g.add(legs);
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 10), mat); head.position.y = 1.6; g.add(head);
@@ -1162,6 +1258,7 @@ function makeRemote(id) {
 
 function removeRemote(r) {
   scene.remove(r.g);
+  if (r.ch) r.ch.dispose();
   r.g.traverse(o => { if (o.geometry) o.geometry.dispose(); });
   remotes.delete(r.id);
 }
@@ -1179,16 +1276,29 @@ function updateRemotes(now, dt) {
     if (b.length > 1 && b[0].t <= t && b[1].t > t) {
       const k = (t - b[0].t) / (b[1].t - b[0].t);
       s = { x: b[0].x + (b[1].x - b[0].x) * k, y: b[0].y + (b[1].y - b[0].y) * k, z: b[0].z + (b[1].z - b[0].z) * k,
-        w: lerpAngle(b[0].w, b[1].w, k), sl: b[1].sl, v: b[1].v };
+        w: lerpAngle(b[0].w, b[1].w, k), sl: b[1].sl, v: b[1].v, h: b[1].h };
     } else s = b[b.length - 1];
+    const moved = Math.hypot(s.x - r.pos.x, s.z - r.pos.z);
+    r.speed += ((dt > 0 ? moved / dt : 0) - r.speed) * Math.min(1, dt * 8);
     r.pos.set(s.x, s.y, s.z); r.yaw = s.w;
     r.g.position.copy(r.pos);
     r.g.rotation.y = r.yaw;
-    r.body.scale.y = s.sl ? 0.6 : 1;
-    r.head.position.y = s.sl ? 1.15 : 1.6;
     // invulnérable juste après la réapparition : clignote
     const op = s.v ? (Math.sin(now / 60) > 0 ? 0.35 : 0.8) : 1;
-    r.mats.forEach(m => { m.opacity = op; m.emissive && m.emissive.setHex(r.flashT > 0 ? 0xffffff : 0x000000); });
+    if (r.ch) {
+      if (s.h <= 0) { if (!r.dead) { r.dead = true; r.ch.once('Death'); } }
+      else {
+        if (r.dead) { r.dead = false; r.ch.play('Idle', 0); }
+        r.ch.play(s.sl ? 'Roll' : r.speed > 1.5 ? 'Run' : 'Idle');
+      }
+      r.ch.opacity(op);
+      r.ch.flash(r.flashT > 0);
+      r.ch.update(dt);
+    } else {
+      r.body.scale.y = s.sl ? 0.6 : 1;
+      r.head.position.y = s.sl ? 1.15 : 1.6;
+      r.mats.forEach(m => { m.opacity = op; m.emissive && m.emissive.setHex(r.flashT > 0 ? 0xffffff : 0x000000); });
+    }
     r.flashT = Math.max(0, r.flashT - dt);
     r.g.visible = r.visible;
   }
@@ -1203,7 +1313,7 @@ function onState(ps) {
     const r = remotes.get(s.i) || makeRemote(s.i);
     if (!r.visible) r.buf.length = 0;   // réapparition : pas d'interpolation depuis l'ancienne place
     r.visible = true;
-    r.buf.push({ t, x: s.x, y: s.y, z: s.z, w: s.w, sl: s.sl, v: s.v });
+    r.buf.push({ t, x: s.x, y: s.y, z: s.z, w: s.w, sl: s.sl, v: s.v, h: s.h });
     if (r.buf.length > 12) r.buf.shift();
   }
   // les joueurs absents du message sont en train de répondre aux questions : on les cache
@@ -1284,9 +1394,10 @@ function onPvpMessage(m) {
   } else if (m.t === 'shot') {
     if (m.id === myId) return;
     const r = remotes.get(m.id);
+    if (r && r.ch) r.ch.attack();
     if (r && r.visible && m.e) {
       const from = r.headPos().add(new THREE.Vector3(0.3, -0.4, 0));
-      tracer(from, new THREE.Vector3().fromArray(m.e), 0xfde68a);
+      tracer(from, new THREE.Vector3().fromArray(m.e), 0x93c5fd);
       if (r.pos.distanceTo(player.pos) < 40) sfx('shot');
     }
   } else if (m.t === 'rocket') {
@@ -1339,8 +1450,8 @@ function revive(spawn) {
 }
 if (EMBED) {
   document.getElementById('menuText').textContent = PVP
-    ? 'Chacun pour soi : réponds aux questions pour gagner des munitions, puis étourdis les autres joueurs !'
-    : 'Réponds aux questions pour gagner des munitions, puis étourdis un maximum de robots !';
+    ? 'Chacun pour soi : réponds aux questions pour recharger tes bâtons, puis étourdis les autres joueurs !'
+    : 'Réponds aux questions pour recharger tes bâtons, puis étourdis un maximum de brigands !';
   if (PVP) {
     document.querySelector('#topRight .lbl').textContent = 'En jeu';
     document.querySelectorAll('#topRight .lbl')[1].textContent = 'Joueurs étourdis';
@@ -1396,7 +1507,19 @@ if (EMBED) {
 }
 
 // ------------------------------------------------------------------ boucle
-let last = performance.now();
+let last = performance.now(), stepT = 0;
+
+// ------------------------------------------------------------------ chargement des assets médiévaux
+// (le jeu est jouable tout de suite avec les boîtes ; le décor arrive dès qu'il est chargé)
+Med.loadLevelAssets()
+  .then(() => { Med.dressLevel(scene, levelParts, levelFloor, ARENA); })
+  .catch(e => console.warn('Décor médiéval indisponible', e));
+Med.loadCharacters()
+  .then(() => {
+    medievalWeapons();
+    if (PVP) for (const r of [...remotes.values()]) removeRemote(r);   // recréés avec les personnages
+  })
+  .catch(e => console.warn('Personnages indisponibles', e));
 function loop(now) {
   const dt = Math.min(0.033, (now - last) / 1000);
   last = now;
@@ -1407,6 +1530,12 @@ function loop(now) {
     updateStyle(dt);
     if (player.alive) {
       updatePlayer(dt, now);
+      // bruits de pas
+      const sp = Math.hypot(player.vel.x, player.vel.z);
+      if (player.onGround && !player.sliding && sp > 3) {
+        stepT -= dt * sp;
+        if (stepT <= 0) { stepT = 3.2; sfx('step'); }
+      } else stepT = 0.5;
       if (mouseDown || keys.Enter || keys.NumpadEnter) fire(now);
     }
     updateGun(dt);
@@ -1427,3 +1556,6 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
+
+// outils de test (captures automatiques) : ?debug
+if (new URLSearchParams(location.search).has('debug')) window.__fps = { player, scene, camera, enemies, remotes: () => remotes, Med };

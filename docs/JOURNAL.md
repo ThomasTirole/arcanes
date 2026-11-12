@@ -5,6 +5,40 @@ Les plus récentes en haut.
 
 ---
 
+## Session 8 — 12 novembre 2026 · Assets médiévaux et nouvelle direction artistique
+
+**Décisions**
+- Thème **médiéval** (choix de Tirtho), assets Quaternius (village + personnages RPG) et sons Kenney, tous CC0.
+- Le pack Kenney *Blaster Kit* (armes de science-fiction) n'est **pas utilisé** : il ne colle pas au thème.
+  Armes tirées du pack RPG : bâton du magicien (foudre), bâton du clerc (feu), épée du guerrier (coup au corps
+  à corps). Les règles ne changent pas, seulement les noms et l'apparence.
+- Décor = **habillage** posé sur les boîtes de collision existantes, pas une nouvelle carte : rien ne change
+  pour la jouabilité ni pour le serveur, et le jeu reste jouable si les modèles ne chargent pas.
+- Légèreté pour les PC de l'école : textures 512 px en WebP, normales / rugosité supprimées, matériaux sans
+  reflets, décor fusionné par matériau. ~4,5 Mo d'assets au total (au lieu de ~250 Mo dans les packs).
+- Robots → **brigands** (personnages animés) ; les volants restent des orbes magiques.
+- Pages élève / prof : palette « taverne » (bois, parchemin, or, rouge brique), Cinzel + Alegreya Sans,
+  icônes SVG médiévales. L'Arène (dessin canvas) n'est pas encore repeinte.
+
+**Réalisé**
+- `modes/fps/public/medieval.js` : chargement, place pavée, façades de maisons sur 3 étages avec toits,
+  tours à toit pointu, estrade, murets, caisses, piliers d'angle ; personnages animés (course, attaque, chute,
+  clignotement protégé) ; armes en vue à la première personne ; sons échantillonnés (épée, impacts, cloche
+  d'étourdissement, pas).
+- `game.js` : intégration (sans toucher aux collisions), brigands, avatars PvP, bruits de pas, ciel et lumière
+  de fin d'après-midi ; HUD et menu du jeu restylés.
+- `public/css/style.css`, `index.html`, `prof.html` : nouvelle DA ; favicon bouclier ; vue prof PvP aux
+  couleurs de la place.
+- Testé : `npm test`, test PvP serveur, captures Chrome (place sous 6 angles, avatar PvP touché, pages élève /
+  prof / quiz). v0.8.0.
+
+**Reste ouvert**
+- Repeindre l'Arène 2D dans le même thème (fond, sorts, magiciens → personnages vus du dessus ?).
+- Vérifier les performances sur les PC de l'école (le décor est plus lourd que les boîtes).
+- Petits ajustements visuels à voir en vrai : position des bâtons, taille des personnages, escaliers.
+
+---
+
 ## Session 7 — 12 novembre 2026 · Retours du premier test PvP en classe
 
 **Décisions**

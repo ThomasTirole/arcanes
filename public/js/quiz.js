@@ -127,7 +127,7 @@
       if (res.explanation) {
         canSkip = !!res.canSkip;
         $('#qFoot').append(
-          el('div', { class: 'qexplain' }, window.Icons.icon('bulb', { size: 20, color: '#c4b5fd' }), el('span', null, res.explanation)),
+          el('div', { class: 'qexplain' }, window.Icons.icon('bulb', { size: 20, color: '#e3b04b' }), el('span', null, res.explanation)),
           canSkip ? el('button', { class: 'btn primary', onclick: skip }, 'Continuer (Entrée)') : '');
       }
       refreshHeader();

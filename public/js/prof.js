@@ -507,7 +507,7 @@
         q.wrong && q.wrong.length ? el('div', null,
           el('div', { class: 'muted', style: 'font-size:13px;margin-bottom:6px' }, 'Se sont trompés'),
           el('div', { class: 'wronglist' }, q.wrong.map(w => el('span', { class: 'chip' }, dot(w.color), w.name, w.count > 1 ? ` ×${w.count}` : '')))) : '',
-        q.explanation ? el('div', { class: 'explain' }, window.Icons.icon('bulb', { size: 18, color: '#c4b5fd' }), el('b', null, ' Explication : '), q.explanation) : ''));
+        q.explanation ? el('div', { class: 'explain' }, window.Icons.icon('bulb', { size: 18, color: '#e3b04b' }), el('b', null, ' Explication : '), q.explanation) : ''));
   }
 
   $('#replay').addEventListener('click', () => socket.emit('host:replay'));

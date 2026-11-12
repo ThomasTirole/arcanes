@@ -41,15 +41,15 @@ const dist3 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 class FpsSession extends Session {
   static id = 'fps';
   static meta = {
-    name: 'FPS',
-    icon: 'bolt',
-    description: 'Tir à la première personne : les bonnes réponses donnent les munitions. Contre des robots, ou chacun pour soi entre élèves. Sur PC, souris conseillée.',
+    name: 'FPS — place du village',
+    icon: 'castle',
+    description: 'Combat de magie à la première personne dans une place de village : les bonnes réponses rechargent les bâtons. Contre des brigands, ou chacun pour soi entre élèves. Sur PC, souris conseillée.',
   };
-  static accommodationsHint = 'les mauvaises réponses donnent aussi quelques balles';
+  static accommodationsHint = 'les mauvaises réponses donnent aussi quelques éclairs';
   static settings = [
     { key: 'variant', label: 'Mode de jeu', type: 'select', default: 'robots',
       options: [
-        { value: 'robots', label: 'Contre les robots (chacun dans son arène)' },
+        { value: 'robots', label: 'Contre des brigands (chacun dans son arène)' },
         { value: 'pvp', label: 'Chacun pour soi (les élèves s\'affrontent)' },
       ] },
     { key: 'frequency', label: 'Fréquence des questions', type: 'select', default: 'med',
@@ -60,8 +60,8 @@ class FpsSession extends Session {
       ] },
   ];
   static help = {
-    text: 'Réponds aux questions pour gagner des munitions, puis étourdis un maximum d\'adversaires. '
-      + 'Étourdi ou à court de munitions ? Retour aux questions. Clique dans le jeu pour viser à la souris.',
+    text: 'Réponds aux questions pour recharger tes bâtons (éclairs et boules de feu), puis étourdis un maximum d\'adversaires. '
+      + 'Étourdi ou bâtons vides ? Retour aux questions. Clique dans le jeu pour viser à la souris.',
     controls: [
       ['WASD', 'bouger'],
       ['Souris / Flèches', 'viser'],
@@ -69,7 +69,7 @@ class FpsSession extends Session {
       ['Espace', 'sauter'],
       ['Maj', 'dash'],
       ['C', 'glisser'],
-      ['Clic droit / F', 'poing'],
+      ['Clic droit / F', 'épée'],
     ],
   };
   static columns = [
@@ -112,7 +112,7 @@ class FpsSession extends Session {
     const before = p.ammo.slice();
     p.ammo = p.ammo.map((a, i) => Math.min(MAX_AMMO[i], a + g[i]));
     const gained = p.ammo.map((a, i) => a - before[i]);
-    const reward = [gained[0] ? `+${gained[0]} balles` : '', gained[1] ? `+${gained[1]} roquettes` : ''].filter(Boolean).join(', ');
+    const reward = [gained[0] ? `+${gained[0]} éclairs` : '', gained[1] ? `+${gained[1]} boules de feu` : ''].filter(Boolean).join(', ');
     let retry = false;
     if (p.quiz.reason === 'revive' && !correct && !this.settings.accommodations && p.quiz.misses < 2) {
       p.quiz.misses++;
@@ -283,7 +283,7 @@ class FpsSession extends Session {
       if (p.killTimes.length >= MAX_KILLS_PER_SEC) return;
       p.killTimes.push(now);
       p.kills++;
-      this.emitAll('feed', { a: p.name, ac: p.color, v: data.head ? 'un robot (tête)' : 'un robot', vc: '#9ca3af' });
+      this.emitAll('feed', { a: p.name, ac: p.color, v: data.head ? 'un brigand (tête)' : 'un brigand', vc: '#9ca3af' });
     } else if (type === 'down' && p.state === 'play') {
       p.downs++;
       this.stun(p);

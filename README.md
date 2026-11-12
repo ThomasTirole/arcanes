@@ -85,19 +85,27 @@ Tous les chiffres (dégâts, vitesses, durées) et la carte sont en haut de `mod
 Images de la carte : pack **Medieval RTS de Kenney** (www.kenney.nl), licence CC0, dans
 `modes/arena/public/assets/medieval/`.
 
-## Le jeu « FPS »
+## Direction artistique
 
-Choisi au lancement comme l'Arène (`modes/fps/`), avec un réglage **« Mode de jeu »** :
+Thème **médiéval « taverne »** sur les pages élève et prof (variables CSS dans `public/css/style.css`) :
+bois sombre, parchemin, or, rouge brique ; réponses aux couleurs héraldiques. Polices Google :
+**Cinzel** (titres) et **Alegreya Sans** (texte). Icônes SVG maison, dont `sword`, `shield`, `castle`,
+`scroll`, `potion`. Le dessin du jeu « Arène » (canvas) garde encore ses couleurs d'origine.
 
-- **Contre les robots** : chaque élève joue dans sa propre arène 3D contre des vagues de robots ;
+## Le jeu « FPS — place du village »
+
+Combat de magie à la première personne dans une **place de village médiévale** (maisons à colombages,
+tours, caisses). Choisi au lancement comme l'Arène (`modes/fps/`), avec un réglage **« Mode de jeu »** :
+
+- **Contre des brigands** : chaque élève joue dans sa propre arène 3D contre des vagues de brigands ;
 - **Chacun pour soi** (PvP) : tous les élèves dans la **même arène**, on s'étourdit entre joueurs.
 
 Dans les deux cas, le serveur gère les questions, les munitions, le classement et le rapport :
 
-- vague de questions → **munitions** (bonne réponse : +12 balles, +2 roquettes ; avec aménagements, une
-  mauvaise réponse donne quand même 5 balles) ;
-- étourdi → 1 question pour revenir ; plus de munitions (ou `R`) → 2 questions ;
-- classement : joueurs (ou robots) étourdis, puis précision.
+- vague de questions → **charges des bâtons** (bonne réponse : +12 éclairs, +2 boules de feu ; avec
+  aménagements, une mauvaise réponse donne quand même 5 éclairs) ;
+- étourdi → 1 question pour revenir (1,5 s après) ; bâtons vides (ou `R`) → 2 questions ;
+- classement : joueurs (ou brigands) étourdis, puis précision.
 
 **PvP** : 100 points d'énergie, revolver 34 (tête 68), roquette jusqu'à 90 avec poussée, poing 40.
 Le navigateur de chaque élève calcule son propre déplacement et annonce ses touches ; **le serveur
@@ -116,13 +124,22 @@ Le prototype solo reste jouable sans questions sur `/proto/fps/` (mêmes fichier
   complet en l'air (gauche / droite en sautant), **dash** (Maj, 3 charges), **glissade** (C maintenu au sol)
   et **glissade-saut** qui garde toute la vitesse, **piqué** (C en l'air) avec onde de choc et rebond si on
   saute juste après
-- **Coup de poing** (clic droit ou F) : repousse les robots et **renvoie leurs tirs** (parade : soin + arrêt
-  sur image) ; étourdir un robot au contact soigne un peu
+- **Coup d'épée** (clic droit ou F) : repousse les brigands et **renvoie leurs sorts** (parade : soin + arrêt
+  sur image) ; étourdir un brigand au contact soigne un peu
 - **Compteur de style** D → C → B → A → S (variété et prise de risque : en l'air, tête, poing, parade…)
-- Armes : revolver (tir instantané, tête = dégâts doublés) et lance-roquettes (explosion, rocket jump)
+- Armes : **bâton de foudre** (tir instantané, tête = dégâts doublés) et **bâton de feu** (boule de feu qui
+  explose, saut propulsé en tirant sous ses pieds)
 - Visée souris ou **clavier seul** (flèches pour viser, Entrée pour tirer)
 - Réglages (Échap) avec valeurs affichées : sensibilité, vitesse de visée au clavier, champ de vision, qualité
-- Three.js embarqué (`modes/fps/public/vendor`, licence MIT), sons synthétisés, aucun fichier externe
+- Three.js embarqué (`modes/fps/public/vendor`, licence MIT, + GLTFLoader / SkeletonUtils)
+- **Assets** (`modes/fps/public/assets/`, tous en CC0, licences dans le dossier) : Quaternius *Medieval Village
+  MegaKit* (décor) et *RPG Characters* (personnages animés, armes), Kenney *RPG Audio* et *Impact Sounds*
+  (épée, impacts, cloche, pas). Textures réduites à 512 px en WebP : ~4,5 Mo en tout.
+- Le décor est un **habillage** (`medieval.js`) posé sur les boîtes de collision de `game.js` : la jouabilité
+  ne change pas, et si les modèles ne chargent pas, le jeu reste jouable avec les boîtes colorées.
+  Décor fusionné en quelques maillages (peu d'appels de dessin) et matériaux sans reflets, pour les PC de l'école.
+- Les autres joueurs (PvP) sont des personnages du pack (guerrier, magicien, voleur, rôdeur, clerc, moine)
+  avec un anneau à leur couleur ; animations course / attaque / chute
 
 Tous les chiffres de déplacement sont en haut de `modes/fps/public/game.js` (objet `P`).
 

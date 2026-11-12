@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Arcanes — Prototype FPS</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><path d=%22M13 2L4 14h7l-1 8 9-12h-7z%22 fill=%22%23a78bfa%22/></svg>">
+  <title>Arcanes — FPS</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><path d=%22M12 2l8 3v6c0 5-3.4 9-8 11-4.6-2-8-6-8-11V5z%22 fill=%22%23e3b04b%22 stroke=%22%236b4718%22 stroke-width=%221.5%22/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
-    :root { --accent: #a78bfa; --text: #f3f0ff; --muted: #b3a8d9; --bg: rgba(18,13,36,.82); --line: #3d3170; }
+    :root { --accent: #e3b04b; --text: #f4e9d3; --muted: #c4ad88; --bg: rgba(26,18,12,.84); --line: #5a4330; --title: 'Cinzel', Georgia, serif; }
     * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0818; color: var(--text); font-family: Fredoka, system-ui, sans-serif; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #16100b; color: var(--text); font-family: 'Alegreya Sans', system-ui, sans-serif; }
     canvas { display: block; }
     .hidden { display: none !important; }
     #hud { position: fixed; inset: 0; pointer-events: none; }
@@ -32,29 +32,29 @@
     .bar i { display: block; height: 100%; background: linear-gradient(90deg, #22c55e, #86efac); transition: width .1s; }
     .dash { display: flex; gap: 6px; margin-top: 8px; }
     .dash span { flex: 1; height: 8px; border-radius: 4px; background: rgba(255,255,255,.15); overflow: hidden; }
-    .dash span i { display: block; height: 100%; background: #67e8f9; }
-    .big { font-size: 30px; font-weight: 700; }
+    .dash span i { display: block; height: 100%; background: #e3b04b; }
+    .big { font-size: 30px; font-weight: 700; font-family: var(--title); }
     .lbl { font-size: 13px; color: var(--muted); }
     #weapons { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
     #weapons div { padding: 4px 10px; border-radius: 8px; border: 1px solid var(--line); font-size: 14px; color: var(--muted); }
-    #weapons div.on { border-color: #fde68a; color: #fde68a; }
+    #weapons div.on { border-color: var(--accent); color: #fbe7a6; }
     #damage { position: fixed; inset: 0; pointer-events: none; box-shadow: inset 0 0 160px rgba(220,38,38,0); transition: box-shadow .25s; }
-    #protect { position: absolute; top: 62%; left: 50%; transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: rgba(56,189,248,.18); border: 1px solid #38bdf8; color: #bae6fd; font-size: 15px; font-weight: 600; }
-    #relock { position: fixed; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 7vh; background: rgba(11,8,24,.25); cursor: pointer; }
+    #protect { position: absolute; top: 62%; left: 50%; transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: rgba(227,176,75,.18); border: 1px solid #e3b04b; color: #fbe7a6; font-size: 15px; font-weight: 600; }
+    #relock { position: fixed; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 7vh; background: rgba(16,11,7,.25); cursor: pointer; }
     #relock .card { width: auto; text-align: center; padding: 16px 22px; }
     #relock button { margin-top: 10px; }
     #banner { position: absolute; top: 28%; left: 50%; transform: translateX(-50%); font-size: 46px; font-weight: 700; text-shadow: 0 4px 0 #000; opacity: 0; transition: opacity .3s; white-space: nowrap; }
-    .overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(11,8,24,.78); }
-    .card { background: #241b45; border: 1px solid var(--line); border-radius: 18px; padding: 28px; width: min(720px, 92vw); box-shadow: 0 20px 50px rgba(0,0,0,.4); }
-    h1 { margin: 0 0 4px; font-size: 40px; background: linear-gradient(90deg, #fde68a, #f0abfc, #a78bfa); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(16,11,7,.78); }
+    .card { background: linear-gradient(180deg, #382a1e, #2a1f16); border: 1px solid var(--line); border-radius: 18px; padding: 28px; width: min(720px, 92vw); box-shadow: 0 20px 50px rgba(0,0,0,.4); }
+    h1 { margin: 0 0 4px; font-size: 40px; font-family: var(--title); background: linear-gradient(180deg, #fbe7a6, #e3b04b 55%, #a8742a); -webkit-background-clip: text; background-clip: text; color: transparent; }
     .muted { color: var(--muted); }
     .keys { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; margin: 18px 0; font-size: 16px; }
-    kbd { background: #2e2458; border: 1px solid var(--line); border-bottom-width: 3px; border-radius: 6px; padding: 1px 7px; font-family: inherit; font-size: 13px; }
-    .btn { font: inherit; font-weight: 600; font-size: 20px; color: #fff; border: none; border-radius: 12px; padding: 12px 26px; cursor: pointer; background: linear-gradient(180deg, #8b5cf6, #6d28d9); box-shadow: 0 4px 0 #4c1d95; }
+    kbd { background: #382a1e; border: 1px solid var(--line); border-bottom-width: 3px; border-radius: 6px; padding: 1px 7px; font-family: inherit; font-size: 13px; }
+    .btn { font: inherit; font-weight: 700; font-size: 20px; color: #1d140c; border: none; border-radius: 12px; padding: 12px 26px; cursor: pointer; background: linear-gradient(180deg, #d9a441, #a8742a); box-shadow: 0 4px 0 #6b4718; }
     .settings { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 24px; margin: 16px 0 20px; }
     .settings label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); }
     .settings input[type=range] { accent-color: var(--accent); }
-    .settings select { font: inherit; background: #1c1536; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px; }
+    .settings select { font: inherit; background: #201710; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px; }
     .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
   </style>
 </head>
@@ -64,7 +64,7 @@
   <div id="hitmark"></div>
   <div id="banner"></div>
   <div id="protect" class="hidden">Protégé · tire ou frappe pour entrer dans le combat</div>
-  <div id="topLeft" class="panel"><span id="fps">— img/s</span> · Prototype FPS</div>
+  <div id="topLeft" class="panel"><span id="fps">— img/s</span> · Arcanes</div>
   <div id="style" class="panel" style="right:16px;top:150px;text-align:right;min-width:190px;opacity:0;transition:opacity .2s">
     <div class="row" style="justify-content:flex-end;gap:10px"><span id="styleName" class="lbl">Destructeur</span><span id="styleLetter" class="big" style="font-size:44px;line-height:1">D</span></div>
     <div class="bar" style="height:6px"><i id="styleBar" style="width:0%"></i></div>
@@ -72,7 +72,7 @@
   </div>
   <div id="topRight" class="panel">
     <div class="lbl">Vague</div><div class="big" id="wave">1</div>
-    <div class="lbl">Robots étourdis</div><div class="big" id="score">0</div>
+    <div class="lbl">Brigands étourdis</div><div class="big" id="score">0</div>
   </div>
   <div id="bottomLeft" class="panel">
     <div class="row" style="justify-content:space-between"><span class="lbl">Énergie</span><b id="hpText">100</b></div>
@@ -82,8 +82,8 @@
   </div>
   <div id="bottomRight" class="panel">
     <div class="lbl">Arme</div>
-    <div class="big" id="weaponName">Revolver</div>
-    <div id="weapons"><div data-w="0">1 · Revolver</div><div data-w="1">2 · Lance-roquettes</div></div>
+    <div class="big" id="weaponName">Bâton de foudre</div>
+    <div id="weapons"><div data-w="0">1 · Bâton de foudre</div><div data-w="1">2 · Bâton de feu</div></div>
     <div class="lbl" style="margin-top:6px"><span id="speed">0</span> m/s</div>
   </div>
 </div>
@@ -96,20 +96,20 @@
 </div>
 <div id="menu" class="overlay">
   <div class="card">
-    <h1>Prototype FPS</h1>
-    <div class="muted" id="menuText">Arène d'entraînement contre des vagues de robots. But du prototype : régler la sensation de jeu et vérifier que ça tourne bien sur les PC de l'école.</div>
+    <h1>La place du village</h1>
+    <div class="muted" id="menuText">Entraînement libre contre des vagues de brigands, sans questions.</div>
     <div class="keys">
       <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> se déplacer (aussi en l'air)</span>
       <span><kbd>Souris</kbd> viser · <kbd>Clic</kbd> tirer</span>
       <span><kbd>Espace</kbd> sauter · 2ᵉ appui en l'air : double saut</span>
-      <span><kbd>Clic droit</kbd> / <kbd>F</kbd> coup de poing (renvoie les tirs)</span>
+      <span><kbd>Clic droit</kbd> / <kbd>F</kbd> coup d'épée (renvoie les sorts)</span>
       <span><kbd>Maj</kbd> dash (3 charges)</span>
       <span><kbd>C</kbd> au sol : glissade (maintenir) · en l'air : piqué</span>
       <span><kbd>Flèches</kbd> viser au clavier · <kbd>Entrée</kbd> tirer</span>
-      <span><kbd>1</kbd> <kbd>2</kbd> <kbd>Q</kbd> molette : changer d'arme</span>
+      <span><kbd>1</kbd> <kbd>2</kbd> <kbd>Q</kbd> molette : changer de bâton</span>
     </div>
     <div class="muted" style="font-size:14px;margin-bottom:6px">Astuces : sauter pendant une glissade garde toute la vitesse · sauter juste après un piqué = rebond plus haut ·
-      Espace contre un mur = saut mural (3 de suite) · roquette sous ses pieds = rocket jump · <kbd>Échap</kbd> pause.</div>
+      Espace contre un mur = saut mural (3 de suite) · boule de feu sous ses pieds = saut propulsé · <kbd>Échap</kbd> pause.</div>
     <div class="settings">
       <label><span>Sensibilité souris : <b id="sensVal">1.0</b></span><input id="sens" type="range" min="0.2" max="3" step="0.1" value="1"></label>
       <label><span>Vitesse de visée au clavier : <b id="keyTurnVal">2.2</b></span><input id="keyTurn" type="range" min="0.5" max="4" step="0.1" value="2.2"></label>
@@ -129,6 +129,7 @@
   </div>
 </div>
 
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 <script type="module" src="./game.js"></script>
 </body>
 </html>

@@ -9,8 +9,12 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 
 ## Prochaines étapes
 
-- [ ] **Assets et nouvelle direction artistique** (session 7 : à démarrer) — Tirtho fournit des assets, on adapte
-      couleurs, police et icônes de toute l'appli en fonction
+- [x] **[fait]** **Assets et nouvelle direction artistique** médiévale : FPS (village, personnages, armes, sons) +
+      pages élève / prof (couleurs, polices, icônes) (session 8)
+- [ ] Vérifier les performances du FPS médiéval sur les PC de l'école
+- [ ] Arène 2D dans le thème médiéval (fond, sorts, personnages vus du dessus)
+- [ ] **[idée]** Choix de son personnage (classe) par l'élève avant la partie
+- [ ] **[idée]** Armes : arbalète, autres bâtons ; le pack Kenney *Blaster Kit* (science-fiction) reste de côté
 - [x] **[fait]** Mise à jour par « Build » + « Run » (la construction récupère le code sur GitHub) (session 4)
 - [ ] **[idée]** Retenter un vrai déploiement automatique plus tard (API Infomaniak, ou demander au support pourquoi le SSH depuis GitHub est refusé)
 - [ ] Tester l'Arène en vraie classe (réseau de l'école, 20+ élèves) et régler l'équilibrage
@@ -32,8 +36,7 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
   - [x] **[fait]** double saut, saut mural, glissade + glissade-saut, coup de poing + parade, compteur de style (session 4)
   - [x] **[fait]** double saut qui propulsait trop vers l'avant : corrigé (session 5)
   - [x] **[fait]** première version jouable en partie avec questions : chacun contre des robots (session 5)
-  - [ ] **Assets à trouver et définir** : thème (robots / magie / médiéval ?), armes 3D, ennemis, décor
-        (pistes CC0 : packs 3D Kenney, Quaternius)
+  - [x] **[fait]** Assets : thème médiéval, packs Quaternius (village, personnages RPG) + sons Kenney (session 8)
   - [ ] **[idée]** plus d'idées Ultrakill : pièce à lancer et à toucher pour un tir rebond, grappin,
         arène qui change, armes alternatives (tir secondaire)
   - [x] **[fait]** PvP « chacun pour soi » dans la même arène, réglage « Mode de jeu » au lancement,
