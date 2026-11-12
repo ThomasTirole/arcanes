@@ -1,7 +1,8 @@
 // FPS Arcanes — déplacements nerveux façon Quake / Ultrakill, dans une place de village médiévale.
 // Les collisions sont des boîtes (ce fichier) ; l'apparence (décor, personnages, sons) vient de medieval.js.
-import * as THREE from 'three';
-import * as Med from './medieval.js';
+import * as THREE from './vendor/three.module.min.js';
+// habillage médiéval chargé à part (import dynamique) : s'il échoue, le jeu marche quand même avec les boîtes
+let Med = { ready: {}, CLASSES: [], loadSounds: async () => {}, playSound: () => false };
 
 // ?embed=1 : intégré dans une partie Arcanes (munitions données par les questions, échanges avec la page parente)
 const EMBED = new URLSearchParams(location.search).has('embed');
@@ -1017,7 +1018,7 @@ let soundsLoading = false;
 function sfx(kind) {
   try {
     if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
-    if (!soundsLoading) { soundsLoading = true; Med.loadSounds(audio).catch(() => {}); }
+    if (!soundsLoading && Med.loadLevelAssets) { soundsLoading = true; Med.loadSounds(audio).catch(() => {}); }
     if (SAMPLE[kind] && Med.playSound(audio, SAMPLE[kind][0], SAMPLE[kind][1])) return;
     const t = audio.currentTime;
     const o = audio.createOscillator(), g = audio.createGain();
@@ -1511,15 +1512,19 @@ let last = performance.now(), stepT = 0;
 
 // ------------------------------------------------------------------ chargement des assets médiévaux
 // (le jeu est jouable tout de suite avec les boîtes ; le décor arrive dès qu'il est chargé)
-Med.loadLevelAssets()
-  .then(() => { Med.dressLevel(scene, levelParts, levelFloor, ARENA); })
-  .catch(e => console.warn('Décor médiéval indisponible', e));
-Med.loadCharacters()
-  .then(() => {
-    medievalWeapons();
-    if (PVP) for (const r of [...remotes.values()]) removeRemote(r);   // recréés avec les personnages
-  })
-  .catch(e => console.warn('Personnages indisponibles', e));
+import('./medieval.js').then(mod => {
+  Med = mod;
+  if (audio && !soundsLoading) { soundsLoading = true; Med.loadSounds(audio).catch(() => {}); }
+  Med.loadLevelAssets()
+    .then(() => { Med.dressLevel(scene, levelParts, levelFloor, ARENA); })
+    .catch(e => console.warn('Décor médiéval indisponible', e));
+  Med.loadCharacters()
+    .then(() => {
+      medievalWeapons();
+      if (PVP) for (const r of [...remotes.values()]) removeRemote(r);   // recréés avec les personnages
+    })
+    .catch(e => console.warn('Personnages indisponibles', e));
+}).catch(e => console.warn('Habillage médiéval indisponible', e));
 function loop(now) {
   const dt = Math.min(0.033, (now - last) / 1000);
   last = now;
@@ -1558,4 +1563,4 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 // outils de test (captures automatiques) : ?debug
-if (new URLSearchParams(location.search).has('debug')) window.__fps = { player, scene, camera, enemies, remotes: () => remotes, Med };
+if (new URLSearchParams(location.search).has('debug')) window.__fps = { player, scene, camera, enemies, remotes: () => remotes, get Med() { return Med; } };

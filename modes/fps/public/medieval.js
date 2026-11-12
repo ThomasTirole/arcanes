@@ -2,7 +2,7 @@
 // Les collisions et la jouabilité restent dans game.js (boîtes) : ce fichier ne fait que l'apparence.
 // Si le chargement échoue (réseau lent, vieux navigateur), le jeu garde ses boîtes colorées.
 // Modèles : Quaternius (Medieval Village MegaKit, RPG Characters), sons : Kenney — tous en CC0.
-import * as THREE from 'three';
+import * as THREE from './vendor/three.module.min.js';
 import { GLTFLoader } from './vendor/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from './vendor/jsm/utils/BufferGeometryUtils.js';
 import * as SkeletonUtils from './vendor/jsm/utils/SkeletonUtils.js';
