@@ -9,6 +9,9 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 
 ## Prochaines étapes
 
+- [ ] **To-do du 15 nov. (Tirtho)** — détaillé dans les rubriques ci-dessous :
+      page de présentation, comptes profs (multi-tenant), dégel en martelant une touche, DA commune Arène / FPS,
+      questions plus sobres, récap de quiz en diaporama
 - [x] **[fait]** **Assets et nouvelle direction artistique** médiévale : FPS (village, personnages, armes, sons) +
       pages élève / prof (couleurs, polices, icônes) (session 8)
 - [ ] Vérifier les performances du FPS médiéval sur les PC de l'école
@@ -75,6 +78,9 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 
 ## Arène
 
+- [ ] **Gelé : marteler une touche pour se dégeler** — la touche à presser est affichée (style touche de
+      clavier) avec une barre de progression tout autour qui se remplit à chaque appui
+- [ ] **Unifier la DA de l'Arène avec le FPS** (même thème médiéval : fond, sorts, personnages, interface)
 - [x] **[fait]** Prédiction du joueur local, interpolation, projectiles fluides (session 4)
 - [x] **[fait]** Particules, ondes de choc, chiffres de dégâts, caméra qui suit, mini-carte (session 4)
 - [ ] **Carte plus grande, ou qui s'agrandit selon le nombre de joueurs** (évite l'entassement à 25)
@@ -91,6 +97,8 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 
 ## Questions & quiz
 
+- [ ] **Fenêtre de questions jolie, agréable et sobre** : retravailler police et couleurs pour la lecture
+      (la DA « manuscrit » peut rester autour, mais les questions doivent rester simples à lire)
 - [x] **[fait]** Explication par question (session 4)
 - [x] **[fait]** Import Excel / CSV compatible Wayground + modèle téléchargeable (session 4)
 - [x] **[fait]** Règle stricte pour les questions à plusieurs bonnes réponses (session 4)
@@ -103,6 +111,8 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 
 ## Résultats & suivi
 
+- [ ] **Récap de quiz amélioré** : option **diaporama question par question** (une question à l'écran, puis
+      ses résultats : répartition des réponses, bonne réponse, explication), à projeter en classe
 - [x] **[fait]** Rapport par question dépliable : juste / faux, réponses choisies, élèves en erreur, explication (session 4)
 - [ ] Historique des parties (retrouver un rapport d'une ancienne session)
 - [ ] Suivi par élève sur plusieurs parties (progression)
@@ -110,6 +120,8 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 
 ## Technique
 
+- [ ] **Multi-tenant** : n'importe qui peut créer un compte (inscription / connexion) et gérer ses propres
+      quiz et parties, au lieu d'un seul mot de passe prof (remplace « Comptes prof multiples »)
 - [x] **[fait]** Dépôt GitHub (session 4) — déploiement auto par SSH abandonné, mise à jour via « Build »
 - [ ] Sauvegarde automatique de `data/quizzes.json` (copie datée, ou export vers GitHub)
 - [ ] Comptes prof multiples (collègues) avec quiz séparés
@@ -117,5 +129,7 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 
 ## Boîte à idées
 
+- [ ] **Page de présentation du jeu** (accueil public : ce qu'est Arcanes, les modes, captures, comment
+      lancer une partie)
 - [ ] **[idée]** Classe virtuelle : retrouver les mêmes pseudos d'une partie à l'autre
 - [ ] **[idée]** Récompenses cosmétiques gagnées avec les bonnes réponses (chapeaux, couleurs de sorts)
