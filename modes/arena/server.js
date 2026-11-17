@@ -143,10 +143,11 @@ class ArenaSession extends Session {
   }
 
   // ----- questions → sorts --------------------------------------------------
-  onAnswer(p, { correct }) {
+  onAnswer(p, { correct, hasty }) {
     const acc = this.settings.accommodations;
     const gained = SPELLS.map((s, i) => {
-      const add = correct ? s.perCorrect : (acc ? s.perWrongAcc : s.perWrong);
+      // réponse au hasard (anti-hasard) : rien du tout
+      const add = hasty ? 0 : correct ? s.perCorrect : (acc ? s.perWrongAcc : s.perWrong);
       const before = p.ammo[i];
       p.ammo[i] = Math.min(s.max, p.ammo[i] + add);
       return p.ammo[i] - before;

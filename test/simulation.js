@@ -144,6 +144,7 @@ async function main() {
     bot.learned = {};
     s.on('quiz:result', r => {
       bot.results++;
+      if (r.penalty) { bot.penalties = (bot.penalties || 0) + 1; if (r.correct || r.canSkip || r.reward) fail('pénalité anti-hasard incohérente (ou munitions données)'); }
       if (r.correct) bot.correct++;
       if (!r.correctChoices) fail('showAnswer=on mais pas de correctChoices');
       if (n === 0) bot.learned[bot.lastQ.text] = r.correctChoices.map(i => bot.lastQ.choices[i]);
@@ -224,6 +225,11 @@ async function main() {
   const answered = report.rows.reduce((s, r) => s + r.answered, 0);
   if (asked !== answered) fail(`incohérence questions ${asked} vs ${answered}`);
   if (totalStuns > totalGot) fail('plus de stuns donnés que subis');
+  // les robots qui répondent au hasard en 0,1-0,4 s se font bloquer ; le robot 0 qui « sait » est épargné une fois appris
+  const penal = bots.slice(1).reduce((n, b) => n + (b.penalties || 0), 0);
+  if (!penal) fail('anti-hasard : aucune pénalité pour des réponses fausses instantanées');
+  if (report.rows.reduce((n, r) => n + r.hasty, 0) < penal) fail('anti-hasard : colonne « au hasard » incomplète');
+  console.log('Anti-hasard : pénalités', bots.map(b => b.penalties || 0).join(' / '));
 
   console.log('Robots :');
   for (const b of bots) console.log(`  ${b.name}: ${b.questions} questions, ${b.correct}/${b.results} justes, ${b.done} retours arène, ${b.scored} stuns`);

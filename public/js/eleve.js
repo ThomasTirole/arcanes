@@ -1,5 +1,5 @@
 // Page élève : rejoindre, salle d'attente, questions et fin de partie sont communs ;
-// le jeu lui-même est fourni par le mode (/modes/<id>/client.js).
+// le jeu lui-même est fourni par le mode (/modes/<id>/jeu.js).
 (function () {
   'use strict';
   const { $, el, fmtTime, show, dot, renderPodium, renderBoard, renderHelp, banner, mainScore, loadMode } = window.UI;

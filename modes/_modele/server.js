@@ -3,7 +3,7 @@
 // MODÈLE DE MODE DE JEU — point de départ pour créer un nouveau jeu.
 //
 // Pour l'activer : copier le dossier modes/_modele en modes/<id> (sans « _ »),
-// mettre le même <id> dans `static id` ci-dessous et dans client.js, puis
+// mettre le même <id> dans `static id` ci-dessous et dans jeu.js, puis
 // redémarrer le serveur. Le mode apparaît alors dans « Lancer une partie ».
 //
 // Ce modèle est un jeu minimal et complet : chaque bonne réponse rapporte
@@ -35,8 +35,9 @@ class ModeleSession extends Session {
   onLateJoin(p) { this.startQuiz(p, 5, 'burst'); }
   onRejoin(p) { this.startQuiz(p, 5, 'burst'); }
 
-  onAnswer(p, { correct }) {
-    const gain = correct ? this.settings.points : (this.settings.accommodations ? 1 : 0);
+  onAnswer(p, { correct, hasty }) {
+    // hasty : réponse fausse donnée trop vite (anti-hasard du moteur) → rien
+    const gain = hasty ? 0 : correct ? this.settings.points : (this.settings.accommodations ? 1 : 0);
     p.points += gain;
     return { reward: gain ? `+${gain} pts` : '', extra: { points: p.points } };
   }
@@ -47,7 +48,7 @@ class ModeleSession extends Session {
     return { points: p.points };
   }
 
-  // onAction(p, type, data) { … }   ← actions envoyées par client.js via ctx.action(type, data)
+  // onAction(p, type, data) { … }   ← actions envoyées par jeu.js via ctx.action(type, data)
   // update(now, dt) { … }           ← appelé 30 fois par seconde
 }
 

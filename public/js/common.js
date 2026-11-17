@@ -63,6 +63,8 @@
       ...(opts.columns || []).map(c => ({ ...c, num: true })),
       { key: 'accuracy', label: 'Précision', num: true, fmt: v => `${v}%` },
       { key: 'answered', label: 'Réponses', num: true, fmt: (v, r) => `${r.correct}/${v}` },
+      // vue prof : réponses données au hasard (bloquées par l'anti-hasard)
+      ...(opts.showHasty ? [{ key: 'hasty', label: 'Au hasard', num: true, fmt: v => (v ? String(v) : '–') }] : []),
     ];
     let sortKey = opts.sortKey || (cols[1] && cols[1].key) || 'accuracy';
     let dir = -1;
@@ -107,7 +109,8 @@
     setTimeout(() => b.remove(), 950);
   }
 
-  // ---- chargement d'un mode de jeu (/modes/<id>/client.js) -----------------
+  // ---- chargement d'un mode de jeu (/modes/<id>/jeu.js) --------------------
+  // (pas « client.js » : certains bloqueurs de pub, comme les boucliers de Brave, bloquaient ce nom)
   const defs = {};
   window.ArcanesModes = { register(id, def) { defs[id] = def; } };
 
@@ -116,14 +119,15 @@
       const s = document.createElement('script');
       s.src = src;
       s.onload = resolve;
-      s.onerror = () => reject(new Error('Impossible de charger ' + src));
+      s.onerror = () => reject(new Error('Le navigateur n\'a pas pu charger le jeu (' + src + '). '
+        + 'Un bloqueur de publicités ou les boucliers de Brave le bloquent peut-être : désactive-les pour ce site, puis recharge la page.'));
       document.head.append(s);
     });
   }
 
   async function loadMode(id) {
     if (defs[id] && defs[id]._ready) return defs[id];
-    if (!defs[id]) await loadScript(`/modes/${id}/client.js`);
+    if (!defs[id]) await loadScript(`/modes/${id}/jeu.js`);
     const def = defs[id];
     if (!def) throw new Error(`Le mode « ${id} » ne s'est pas enregistré.`);
     for (const css of def.css || []) {

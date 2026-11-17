@@ -126,6 +126,20 @@
       const msg = res.timeout ? 'Temps écoulé !' : res.correct ? 'Bonne réponse !' : 'Mauvaise réponse';
       $('#qFoot').replaceChildren(el('div', { class: 'qresult ' + (res.correct ? 'good' : 'bad') },
         msg, mode().renderReward ? mode().renderReward(res) : (res.reward ? `   ${res.reward}` : '')));
+      if (res.penalty) {
+        // anti-hasard : compte à rebours avant la question suivante
+        const left = el('b', null, '');
+        const until = performance.now() + res.penalty;
+        const tick = () => {
+          const sec = Math.ceil((until - performance.now()) / 1000);
+          if (sec <= 0 || !document.body.contains(left)) return;
+          left.textContent = `${sec} s`;
+          setTimeout(tick, 200);
+        };
+        $('#qFoot').append(el('div', { class: 'qpenalty' }, window.Icons.icon('clock', { size: 20 }),
+          el('span', null, 'Trop vite ! Prends le temps de lire la question. Rien de gagné, question suivante dans '), left));
+        tick();
+      }
       if (res.explanation) {
         canSkip = !!res.canSkip;
         $('#qFoot').append(

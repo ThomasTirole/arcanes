@@ -148,11 +148,16 @@ Le prototype solo reste jouable sans questions sur `/proto/fps/` (mêmes fichier
   complet en l'air (gauche / droite en sautant), **dash** (Maj, 3 charges), **glissade** (C maintenu au sol)
   et **glissade-saut** qui garde toute la vitesse, **piqué** (C en l'air) avec onde de choc et rebond si on
   saute juste après
-- **Coup d'épée** (clic droit ou F) : repousse les brigands et **renvoie leurs sorts** (parade : soin + arrêt
-  sur image) ; étourdir un brigand au contact soigne un peu
+- **Coup d'épée** (clic droit ou F) : l'épée se lève puis taille en diagonale avec un arc lumineux, petit
+  roulis de caméra, étincelles et arrêt sur image à l'impact ; repousse les brigands et **renvoie leurs sorts**
+  (parade : soin + arrêt sur image) ; étourdir un brigand au contact soigne un peu
 - **Compteur de style** D → C → B → A → S (variété et prise de risque : en l'air, tête, poing, parade…)
-- Armes : **bâton de foudre** (tir instantané, tête = dégâts doublés) et **bâton de feu** (boule de feu qui
-  explose, saut propulsé en tirant sous ses pieds)
+- Armes : **bâton de foudre** (tir instantané, tête = dégâts doublés) et **bâton de feu** : une **grosse boule de
+  feu** (cœur brillant, langues de feu, traînée de flammes et de fumée, lumière qui éclaire le décor) qui
+  explose (flash, boules de feu, fumée, braises, onde de choc, trace noire au sol, souffle sonore) ; saut
+  propulsé en tirant sous ses pieds. Tout est dessiné par le code, sans asset.
+- Après chaque série de questions, un simple bandeau « clique (ou Entrée) pour reprendre » ; le menu complet
+  (commandes, sensibilité) seulement au premier départ ou avec Échap
 - Visée souris ou **clavier seul** (flèches pour viser, Entrée pour tirer)
 - Réglages (Échap) avec valeurs affichées : sensibilité, vitesse de visée au clavier, champ de vision, qualité
 - Three.js embarqué (`modes/fps/public/vendor`, licence MIT, + GLTFLoader / SkeletonUtils)
@@ -177,6 +182,13 @@ Tous les chiffres de déplacement sont en haut de `modes/fps/public/game.js` (ob
   forcer sur n'importe quelle question.
 - **Explication** facultative par question : montrée à l'élève quand il se trompe (si « montrer la bonne
   réponse » est activé), et toujours dans le rapport du prof.
+- **Anti-hasard** (réglage, activé par défaut) : une **mauvaise réponse donnée avant le temps de lecture**
+  (2,5 à 6 s selon la longueur de la question et des réponses) ne rapporte **rien** (pas de munitions) et
+  bloque l'élève 5 s avant la question suivante,
+  puis 8, 11, 14 s si ça recommence ; une bonne réponse remet le compteur à zéro. Le message « Trop vite !
+  Prends le temps de lire la question » s'affiche avec un compte à rebours. Évite de cliquer au hasard pour
+  les munitions. Colonne « Au hasard » dans les résultats du prof.
+- À l'ouverture d'une série de questions, clics, chiffres et Entrée sont ignorés 0,9 s (clic réflexe en jouant).
 - **Rapport par question** : chaque question se déplie — juste / faux / sans réponse, nombre de fois que
   chaque réponse a été choisie, élèves qui se sont trompés, explication.
 
@@ -213,9 +225,9 @@ lib/session.js        2. LE MOTEUR COMMUN — salle d'attente, joueurs, reconnex
                          résultats, podium, rapport par question
 modes/<id>/           3. LES JEUX — un dossier par jeu, chargé automatiquement
   server.js              règles du jeu (hérite de Session)
-  public/client.js       affichage élève + vue spectateur du prof
+  public/jeu.js          affichage élève + vue spectateur du prof
 modes/arena/          l'Arène : server.js (règles), maps.js (cartes), public/physics.js (collisions partagées),
-                      public/render.js (dessin, particules), public/client.js (contrôles, prédiction)
+                      public/render.js (dessin, particules), public/jeu.js (contrôles, prédiction)
 modes/_modele/        modèle commenté pour créer un nouveau jeu (ignoré tant qu'il commence par « _ »)
 
 server.js             HTTP + API + Socket.io (générique)
@@ -231,7 +243,7 @@ scripts/              remote-deploy.sh (lancé sur le serveur après l'envoi : n
 ## Ajouter un jeu
 
 1. Copier `modes/_modele` en `modes/mon-jeu` et mettre `mon-jeu` comme identifiant dans `server.js`
-   (`static id`) et `public/client.js` (`register('mon-jeu', …)`).
+   (`static id`) et `public/jeu.js` (`register('mon-jeu', …)`).
 2. Redémarrer le serveur : le jeu apparaît dans « Lancer une partie », avec ses propres réglages.
 
 Le modèle est un jeu minimal qui fonctionne tel quel (chaque bonne réponse rapporte des points). Un jeu
@@ -246,5 +258,5 @@ ne s'occupe que de ses règles ; il décide :
 | `onAction`, `update(now, dt)` | actions des élèves et boucle de jeu (30×/s) |
 | `playerScore`, `compareRows` | scores affichés et classement du podium |
 
-Côté navigateur, `client.js` fournit `createPlayer(ctx)` (écran élève) et `createSpectator(ctx)`
+Côté navigateur, `jeu.js` fournit `createPlayer(ctx)` (écran élève) et `createSpectator(ctx)`
 (vue projetée) ; la fenêtre de questions, l'horloge, la fin de partie et les résultats prof sont communs.

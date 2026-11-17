@@ -5,6 +5,34 @@ Les plus récentes en haut.
 
 ---
 
+## Session 11 — 17 novembre 2026 · Retours de classe : FPS, Brave, anti-hasard
+
+**Décisions**
+- **Anti-hasard** (demande de Tirtho : éviter de répondre au hasard pour les munitions) : dans le moteur commun,
+  donc valable pour tous les jeux. Seules les réponses **fausses et plus rapides que le temps de lecture**
+  sont punies (un élève qui réfléchit et se trompe ne l'est pas) : **aucune munition** (même avec les
+  aménagements) et blocage 5 → 8 → 11 → 14 s, remis à zéro
+  par une bonne réponse. Réglage activé par défaut, désactivable au lancement. Le prof voit une colonne
+  « Au hasard » dans les résultats.
+- **Brave** : les fichiers des jeux s'appellent maintenant `jeu.js` au lieu de `client.js` (nom bloqué par
+  certains filtres anti-pub) ; si le chargement échoue quand même, le message dit de désactiver le bloqueur.
+- **Boule de feu** dessinée par le code (sprites additifs, lumières), sans asset : Tirtho pourra la changer.
+  Lumières réservées une fois pour toutes (en ajouter en cours de jeu provoquerait des saccades).
+- **Épée** : pose calculée par direction de lame (levée → couchée à gauche) plutôt qu'avec des angles, plus un
+  arc lumineux en diagonale.
+
+**Réalisé**
+- FPS : bandeau de reprise après les questions (menu complet seulement au départ), boule de feu et explosion,
+  coup d'épée retravaillé (élan, taille, arc, roulis, étincelles, arrêt sur image, bâton qui s'abaisse).
+- Moteur : anti-hasard (`lib/session.js`), compte à rebours dans la fenêtre de questions, colonne prof.
+- Tests : `npm test` vérifie que des réponses fausses instantanées sont bloquées et comptées. Captures Chrome
+  de l'épée (6 positions) et de la boule de feu (vol + explosion). v0.11.0.
+
+**Reste ouvert**
+- Réglages fins à juger en vrai : vitesse du coup d'épée, taille de la boule de feu, durées de l'anti-hasard.
+
+---
+
 ## Session 10 — 17 novembre 2026 · Comptes profs (multi-tenant)
 
 **Décisions** (choix de Tirtho)

@@ -380,6 +380,8 @@ function updatePlayer(dt, now) {
   camera.rotateY(p.yaw);
   camera.rotateX(p.pitch + p.kick);
   if (p.sliding) camera.rotateZ(0.04);
+  swingRoll *= Math.exp(-dt * 12);
+  if (Math.abs(swingRoll) > 0.001) camera.rotateZ(swingRoll);
   if (shakeAmt > 0.001) {
     camera.position.x += (Math.random() - 0.5) * shakeAmt * 0.3;
     camera.position.y += (Math.random() - 0.5) * shakeAmt * 0.3;
@@ -431,7 +433,24 @@ const arm = new THREE.Group();
   const fist = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.15, 0.17), skin); fist.position.z = -0.1; arm.add(fist);
 }
 camera.add(arm);
-let punchAnim = 0, swordMode = false;
+let punchAnim = 0, swordMode = false, swingRoll = 0, slashShown = false;
+// arc de coupe : un croissant lumineux qui balaie l'écran pendant le coup d'épée
+const slashArc = new THREE.Group();
+for (const [inner, outer, op] of [[0.8, 0.98, 0.22], [0.92, 0.97, 0.75]]) {
+  const m = new THREE.Mesh(new THREE.RingGeometry(inner, outer, 40, 1, Math.PI * 0.1, Math.PI * 0.75),
+    new THREE.MeshBasicMaterial({ color: 0xf3f8ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, side: THREE.DoubleSide }));
+  m.userData.op = op;
+  m.renderOrder = 20;
+  slashArc.add(m);
+}
+slashArc.position.set(-0.12, -0.18, -1.05);
+slashArc.rotation.set(0, 0, 0.45);   // de en haut à droite vers en bas à gauche, comme la lame
+slashArc.scale.set(1.15, 0.42, 1);      // ellipse aplatie : une entaille en diagonale
+const FORWARD = new THREE.Vector3(0, 0, -1), SWORD_DIR = new THREE.Vector3();
+const SWORD_UP = new THREE.Vector3(0.15, 0.95, -0.3).normalize();     // lame levée
+const SWORD_END = new THREE.Vector3(-0.95, -0.15, -0.35).normalize(); // lame couchée vers la gauche
+slashArc.visible = false;
+camera.add(slashArc);
 
 // met un modèle à la bonne taille, son grand axe pointé vers l'avant (-z)
 function fitModel(obj, length) {
@@ -465,8 +484,8 @@ function medievalWeapons() {
   const sword = Med.weaponModel('Warrior', 'Warrior_Sword');
   if (sword) {
     arm.children.forEach(c => { c.visible = false; });
-    const s = fitModel(sword, 1.0);
-    s.position.z = -0.35;
+    const s = fitModel(sword, 1.1);
+    s.position.z = -0.42;     // la poignée dans la main, la lame vers l'avant
     arm.add(s);
     swordMode = true;
   }
@@ -478,7 +497,9 @@ function punch(now) {
   if (!p.alive || p.punchCd > 0) return;
   p.punchCd = P.punchRate;
   punchAnim = 1;
+  slashShown = false;
   sfx('punch');
+  fireSound('swish');
   const origin = camera.getWorldPosition(new THREE.Vector3());
   const dir = aimDir();
   let hitSomething = false;
@@ -508,7 +529,8 @@ function punch(now) {
     const d = to.length();
     if (d < P.punchRange + e.r && to.normalize().dot(dir) > 0.55) {
       e.kb = (e.kb || new THREE.Vector3()).copy(dir).setY(0).normalize().multiplyScalar(14);
-      damageEnemy(e, 45, c.clone().addScaledVector(dir, -e.r), false, 'poing');
+      damageEnemy(e, 45, c.clone().addScaledVector(dir, -e.r), false, 'épée');
+      burst(c.clone().addScaledVector(dir, -e.r), 0xfff3c4, 10, 7);
       hitSomething = true;
     }
   }
@@ -517,7 +539,7 @@ function punch(now) {
     protectedUntil = 0;
     if (t) { toParent({ t: 'punch', id: t.id }); burst(t.center(), 0xe5e7eb, 6, 5); hitSomething = true; }
   }
-  if (hitSomething) { shake(0.15); p.kick -= 0.02; }
+  if (hitSomething) { shake(0.22); p.kick -= 0.03; hitStop(0.05); sfx('hit'); }
 }
 
 let stopUntil = 0;
@@ -539,19 +561,30 @@ function updateGun(dt) {
   swapAnim = Math.max(0, swapAnim - dt * 5);
   const speed = Math.hypot(player.vel.x, player.vel.z);
   const sway = player.onGround ? Math.sin(player.bob) * 0.012 * Math.min(1, speed / 9) : 0;
-  gun.position.set(0.34 + sway, -0.32 - swapAnim * 0.4 + Math.abs(sway) * 0.5, -0.55 + gunRecoil * 0.18);
+  gun.position.set(0.34 + sway, -0.32 - swapAnim * 0.4 - (swordMode ? punchAnim * 0.3 : 0) + Math.abs(sway) * 0.5, -0.55 + gunRecoil * 0.18);   // le bâton s'abaisse pendant le coup d'épée
   gun.rotation.x = gunRecoil * 0.6;
   flash.intensity *= Math.exp(-dt * 30);
   player.punchCd = Math.max(0, player.punchCd - dt);
-  punchAnim = Math.max(0, punchAnim - dt * 4);
+  punchAnim = Math.max(0, punchAnim - dt * (swordMode ? 3.6 : 4));
   const ext = Math.sin(Math.min(1, (1 - punchAnim) * 1.6) * Math.PI);
   arm.visible = punchAnim > 0;
   if (swordMode) {
-    // coup d'épée : balayage de droite à gauche
-    const k = 1 - punchAnim;
-    arm.position.set(0.35 - k * 0.7, -0.28 + ext * 0.1, -0.55);
-    arm.rotation.set(-0.2, 0.9 - k * 1.8, -0.9 + k * 0.5);
+    // coup d'épée : petite prise d'élan (15 %), puis taille rapide de droite à gauche, vers le bas
+    if (window.__swing != null) punchAnim = 1 - window.__swing;   // outil de test (?debug)
+    const t = 1 - punchAnim;
+    const wind = Math.min(1, t / 0.15);
+    const k = t < 0.15 ? 0 : 1 - Math.pow(1 - Math.min(1, (t - 0.15) / 0.45), 3);
+    // la main va de en haut à droite à en bas à gauche ; la lame passe de « levée » à « couchée vers la gauche »
+    arm.position.set(0.42 + wind * 0.06 - k * 0.78, -0.3 + wind * 0.06 - k * 0.2, -0.5 - Math.sin(k * Math.PI) * 0.15);
+    SWORD_DIR.copy(SWORD_UP).lerp(SWORD_END, k).normalize();
+    arm.quaternion.setFromUnitVectors(FORWARD, SWORD_DIR);
+    // arc lumineux pendant la taille
+    if (t > 0.15 && !slashShown) { slashShown = true; swingRoll = 0.035; }
+    const a = t < 0.15 ? 0 : Math.max(0, 1 - (t - 0.15) / 0.4);
+    slashArc.visible = a > 0;
+    slashArc.children.forEach(m => { m.material.opacity = m.userData.op * a * Math.min(1, k * 3); });
   } else arm.position.set(-0.28 + ext * 0.12, -0.3 + ext * 0.08, -0.45 - ext * 0.35);
+  if (punchAnim <= 0) slashArc.visible = false;
 }
 
 // ------------------------------------------------------------------ tirs
@@ -643,24 +676,19 @@ function fire(now) {
       damageEnemy(hit.e, hit.head ? w.dmg * 2 : w.dmg, end, hit.head);
     } else if (wallD < 120) burst(end, 0xfde68a, 6, 4);
   } else {
-    sfx('rocket');
-    const m = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffa94d }));
-    m.position.copy(muzzle);
-    scene.add(m);
+    fireSound('whoosh');
+    const fb = makeFireball(muzzle);
     const k = ++rocketSeq;
-    rockets.push({ mesh: m, vel: dir.clone().multiplyScalar(w.speed), born: now, trail: 0, k });
+    rockets.push({ mesh: fb.g, fb, vel: dir.clone().multiplyScalar(w.speed), born: now, trail: 0, k });
+    fxSprite('glow', muzzle, { color: 0xffc070, toColor: 0xff5a1a, size: 1.2, grow: 0.8, life: 0.15 });
     if (PVP) { protectedUntil = 0; toParent({ t: 'rocket', k, o: [muzzle.x, muzzle.y, muzzle.z].map(v => +v.toFixed(2)), d: [dir.x, dir.y, dir.z].map(v => +v.toFixed(3)) }); }
   }
 }
 let rocketSeq = 0;
 
 function explode(pos, radius, dmg, rocket) {
-  burst(pos, 0xf97316, 30, 12);
-  burst(pos, 0xfde68a, 14, 7);
-  ring(pos, radius, 0xf97316);
-  sfx('boom');
+  fireBoom(pos, radius);
   const d = player.pos.clone().add(new THREE.Vector3(0, 0.9, 0)).distanceTo(pos);
-  shake(Math.max(0, 0.5 - d / 30));
   // rocket jump : poussée + petits dégâts pour soi
   if (d < radius) {
     const push = player.pos.clone().add(new THREE.Vector3(0, 0.9, 0)).sub(pos).normalize();
@@ -704,19 +732,18 @@ function updateRockets(dt, now) {
     }
     if (r.remote && (wallD < len || now - r.born > 4000)) {
       // roquette d'un autre joueur : l'explosion visible arrive avec le message du serveur
-      scene.remove(r.mesh); r.mesh.geometry.dispose(); rockets.splice(i, 1);
+      disposeFireball(r); rockets.splice(i, 1);
       continue;
     }
     if (!r.remote && (wallD < len || hitEnemy || now - r.born > 4000)) {
       r.mesh.position.addScaledVector(dir, Math.min(wallD, len));
       explode(r.mesh.position.clone(), WEAPONS[1].splash, WEAPONS[1].dmg, r);
-      scene.remove(r.mesh); r.mesh.geometry.dispose();
+      disposeFireball(r);
       rockets.splice(i, 1);
       continue;
     }
     r.mesh.position.add(step);
-    r.trail += dt;
-    if (r.trail > 0.02) { r.trail = 0; puff(r.mesh.position.clone(), 0xffd8a8, 0.35); }
+    fireballTrail(r, dt, now);
   }
 }
 
@@ -788,7 +815,7 @@ function damageEnemy(e, dmg, at, head, how) {
     addStyle(100, 'ÉTOURDI');
     if (head) addStyle(60, 'TÊTE');
     if (!player.onGround) addStyle(60, 'EN L\'AIR');
-    if (how === 'poing') addStyle(80, 'POING');
+    if (how === 'épée') addStyle(80, 'ÉPÉE');
     if (how === 'parade') addStyle(120, 'RENVOI');
     if (how === 'piqué') addStyle(80, 'PIQUÉ');
     if (close) { player.hp = Math.min(100, player.hp + 10); addStyle(30, 'AU CONTACT'); }
@@ -927,7 +954,8 @@ function hurtPlayer(n, fromEnemy) {
 function restart() {
   for (const e of [...enemies, ...dying.map(d => d.e)]) scene.remove(e.mesh);
   enemies.length = 0; dying.length = 0;
-  for (const s of [...enemyShots, ...rockets]) scene.remove(s.mesh);
+  for (const s of enemyShots) scene.remove(s.mesh);
+  for (const r of rockets) disposeFireball(r);
   enemyShots.length = 0; rockets.length = 0;
   Object.assign(player, { hp: 100, alive: true, dash: P.dashCharges, slamming: false, sliding: false, airJumps: 1, wallJumps: P.wallJumps });
   style = 0; styleFeed.length = 0;
@@ -937,6 +965,211 @@ function restart() {
   document.getElementById('score').textContent = '0';
   hideBanner();
   if (!PVP) startWave();
+}
+
+
+// ------------------------------------------------------------------ boule de feu
+// Tout est dessiné à la main (pas d'asset) : un cœur brillant, un halo additif, une lumière qui éclaire le
+// décor, une traînée de flammes et de fumée ; à l'impact, flash, boules de feu qui gonflent, fumée,
+// braises, onde de choc et trace noire au sol.
+function glowTexture(stops) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  for (const [at, col] of stops) grd.addColorStop(at, col);
+  g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const FX_TEX = {
+  glow: glowTexture([[0, 'rgba(255,255,255,1)'], [0.25, 'rgba(255,230,160,.9)'], [0.6, 'rgba(255,140,40,.35)'], [1, 'rgba(255,80,0,0)']]),
+  flame: glowTexture([[0, 'rgba(255,255,255,1)'], [0.35, 'rgba(255,255,255,.6)'], [1, 'rgba(255,255,255,0)']]),
+  smoke: glowTexture([[0, 'rgba(255,255,255,.55)'], [0.6, 'rgba(255,255,255,.2)'], [1, 'rgba(255,255,255,0)']]),
+};
+const fxSprites = [];
+const fxMatPool = [];
+function fxSprite(kind, pos, o) {
+  const additive = kind !== 'smoke';
+  const mat = fxMatPool.pop() || new THREE.SpriteMaterial({ transparent: true, depthWrite: false });
+  mat.map = FX_TEX[kind === 'smoke' ? 'smoke' : kind === 'glow' ? 'glow' : 'flame'];
+  mat.blending = additive ? THREE.AdditiveBlending : THREE.NormalBlending;
+  mat.color.setHex(o.color);
+  mat.opacity = o.opacity ?? 1;
+  mat.rotation = Math.random() * Math.PI * 2;
+  mat.needsUpdate = true;
+  const sp = new THREE.Sprite(mat);
+  sp.position.copy(pos);
+  sp.scale.setScalar(o.size);
+  sp.renderOrder = additive ? 3 : 2;
+  scene.add(sp);
+  fxSprites.push({ sp, mat, t: 0, life: o.life, size: o.size, grow: o.grow || 0, vel: o.vel || new THREE.Vector3(), rise: o.rise || 0,
+    c0: new THREE.Color(o.color), c1: new THREE.Color(o.toColor ?? o.color), op: o.opacity ?? 1, spin: (Math.random() - 0.5) * 2 });
+}
+function updateFx(dt) {
+  for (let i = fxSprites.length - 1; i >= 0; i--) {
+    const f = fxSprites[i];
+    f.t += dt / f.life;
+    if (f.t >= 1) { scene.remove(f.sp); fxMatPool.push(f.mat); fxSprites.splice(i, 1); continue; }
+    f.vel.y += f.rise * dt;
+    f.vel.multiplyScalar(Math.exp(-dt * 2.2));
+    f.sp.position.addScaledVector(f.vel, dt);
+    f.sp.scale.setScalar(f.size * (1 + f.grow * f.t));
+    f.mat.color.copy(f.c0).lerp(f.c1, f.t);
+    f.mat.opacity = f.op * (1 - f.t) * (f.t < 0.08 ? f.t / 0.08 : 1);
+    f.mat.rotation += f.spin * dt;
+  }
+  for (let i = fireLights.length - 1; i >= 0; i--) {
+    const l = fireLights[i];
+    l.t += dt / l.life;
+    if (l.t >= 1) { freeLight(l.light); fireLights.splice(i, 1); continue; }
+    l.light.intensity = l.power * (1 - l.t) * (1 - l.t);
+  }
+  for (let i = scorches.length - 1; i >= 0; i--) {
+    const s2 = scorches[i];
+    s2.t += dt / 8;
+    if (s2.t >= 1) { scene.remove(s2.mesh); s2.mesh.material.dispose(); scorches.splice(i, 1); continue; }
+    s2.mesh.material.opacity = 0.55 * Math.min(1, (1 - s2.t) * 3);
+  }
+}
+const fireLights = [], scorches = [];
+// lumières réservées une fois pour toutes : en ajouter / retirer en cours de jeu ferait recompiler les
+// matériaux (saccades). Une lumière libre a une intensité nulle.
+const LIGHT_POOL = Array.from({ length: 4 }, () => {
+  const l = new THREE.PointLight(0xff8a2a, 0, 9, 1.6);
+  l.userData.busy = false;
+  scene.add(l);
+  return l;
+});
+function takeLight() {
+  const l = LIGHT_POOL.find(x => !x.userData.busy);
+  if (l) l.userData.busy = true;
+  return l || null;
+}
+function freeLight(l) { if (l) { l.intensity = 0; l.userData.busy = false; } }
+const scorchGeo = new THREE.CircleGeometry(1, 24);
+const scorchTex = glowTexture([[0, 'rgba(20,12,8,1)'], [0.55, 'rgba(30,18,10,.8)'], [1, 'rgba(30,18,10,0)']]);
+
+function makeFireball(pos) {
+  const g = new THREE.Group();
+  const core = new THREE.Mesh(new THREE.SphereGeometry(0.36, 16, 12), new THREE.MeshBasicMaterial({ color: 0xfff4d0 }));
+  g.add(core);
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: FX_TEX.glow, color: 0xff9a3c, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false }));
+  halo.scale.setScalar(2.6);
+  g.add(halo);
+  // langues de feu qui tournent autour du cœur
+  const tongues = [];
+  for (let i = 0; i < 4; i++) {
+    const t = new THREE.Sprite(new THREE.SpriteMaterial({ map: FX_TEX.flame, color: i % 2 ? 0xff7a1a : 0xffb347, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.9 }));
+    t.scale.setScalar(1.1);
+    g.add(t);
+    tongues.push(t);
+  }
+  const light = takeLight();
+  if (light) { light.distance = 9; light.position.copy(pos); }
+  g.position.copy(pos);
+  scene.add(g);
+  return { g, halo, light, core, tongues };
+}
+function disposeFireball(r) {
+  scene.remove(r.mesh);
+  freeLight(r.fb.light);
+  r.fb.core.geometry.dispose(); r.fb.core.material.dispose(); r.fb.halo.material.dispose();
+  r.fb.tongues.forEach(t => t.material.dispose());
+}
+// flammes et fumée derrière la boule pendant le vol
+function fireballTrail(r, dt, now) {
+  const p = r.mesh.position;
+  const flick = 1 + Math.sin(now / 35 + r.k) * 0.12 + (Math.random() - 0.5) * 0.15;
+  r.fb.halo.scale.setScalar(2.6 * flick);
+  r.fb.tongues.forEach((t, i) => {
+    const a = now / 90 + i * Math.PI / 2;
+    t.position.set(Math.cos(a) * 0.22, Math.sin(a * 1.3) * 0.22, Math.sin(a) * 0.22);
+    t.scale.setScalar(0.9 + Math.random() * 0.5);
+    t.material.rotation = a;
+  });
+  if (r.fb.light) { r.fb.light.intensity = 5 + Math.random() * 2; r.fb.light.position.copy(p); }
+  r.trail += dt;
+  while (r.trail > 0.012) {
+    r.trail -= 0.012;
+    const back = r.vel.clone().normalize().multiplyScalar(-0.15 - Math.random() * 0.2);
+    const jitter = new THREE.Vector3((Math.random() - 0.5) * 0.18, (Math.random() - 0.5) * 0.18, (Math.random() - 0.5) * 0.18);
+    fxSprite('flame', p.clone().add(back).add(jitter), { color: 0xffd27a, toColor: 0xb3260a, size: 0.95 + Math.random() * 0.4, grow: -0.6, life: 0.3 + Math.random() * 0.12, vel: back.multiplyScalar(2), rise: 2 });
+    if (Math.random() < 0.35) fxSprite('smoke', p.clone().add(jitter), { color: 0x3b302a, toColor: 0x6b625a, size: 0.6, grow: 2.4, life: 0.8 + Math.random() * 0.4, opacity: 0.45, rise: 1.2 });
+  }
+}
+// explosion de la boule de feu (vue par tout le monde)
+function fireBoom(pos, radius) {
+  const flash = takeLight();
+  if (flash) {
+    flash.distance = radius * 6;
+    flash.position.copy(pos).add(new THREE.Vector3(0, 0.5, 0));
+    fireLights.push({ light: flash, t: 0, life: 0.6, power: 30 });
+  }
+  fxSprite('glow', pos, { color: 0xffffff, toColor: 0xff8a2a, size: radius * 1.2, grow: 1.4, life: 0.25 });
+  for (let i = 0; i < 16; i++) {
+    const v = new THREE.Vector3(Math.random() - 0.5, Math.random() * 0.8, Math.random() - 0.5).normalize().multiplyScalar(radius * (1.2 + Math.random() * 1.6));
+    fxSprite('flame', pos, { color: 0xffe08a, toColor: 0xa11d06, size: 1.1 + Math.random() * 0.9, grow: 1.1, life: 0.45 + Math.random() * 0.35, vel: v, rise: 3 });
+  }
+  for (let i = 0; i < 10; i++) {
+    const v = new THREE.Vector3(Math.random() - 0.5, Math.random() * 0.6 + 0.3, Math.random() - 0.5).multiplyScalar(radius * 1.2);
+    fxSprite('smoke', pos.clone().add(new THREE.Vector3(0, 0.3, 0)), { color: 0x2c241f, toColor: 0x6d655d, size: 1.4 + Math.random(), grow: 1.8, life: 1.4 + Math.random() * 0.8, vel: v, rise: 1.5, opacity: 0.7 });
+  }
+  burst(pos, 0xffb347, 22, 13);      // braises
+  burst(pos, 0xfff1c1, 10, 8);
+  ring(pos, radius * 1.3, 0xff9a3c);
+  // trace noire au sol
+  if (pos.y < 1.2) {
+    const m = new THREE.Mesh(scorchGeo, new THREE.MeshBasicMaterial({ map: scorchTex, transparent: true, depthWrite: false, opacity: 0.55 }));
+    m.rotation.x = -Math.PI / 2;
+    m.position.set(pos.x, 0.02 + Math.random() * 0.01, pos.z);
+    m.scale.setScalar(radius * 0.7);
+    scene.add(m);
+    scorches.push({ mesh: m, t: 0 });
+    if (scorches.length > 12) { const o = scorches.shift(); scene.remove(o.mesh); o.mesh.material.dispose(); }
+  }
+  const d = player.pos.clone().add(new THREE.Vector3(0, 0.9, 0)).distanceTo(pos);
+  fireSound('boom', Math.max(0.15, 1 - d / 45));
+  shake(Math.max(0, 0.7 - d / 25));
+}
+
+// sons de feu : bruit filtré (souffle) plutôt qu'un simple bip
+let noiseBuf = null;
+function fireSound(kind, vol = 1) {
+  try {
+    if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+    const t = audio.currentTime;
+    if (!noiseBuf) {
+      noiseBuf = audio.createBuffer(1, audio.sampleRate * 1.5, audio.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const src = audio.createBufferSource(); src.buffer = noiseBuf;
+    const f = audio.createBiquadFilter(), g = audio.createGain();
+    src.connect(f); f.connect(g); g.connect(audio.destination);
+    if (kind === 'swish') {
+      f.type = 'bandpass'; f.Q.value = 1.4;
+      f.frequency.setValueAtTime(2600, t + 0.04); f.frequency.exponentialRampToValueAtTime(700, t + 0.2);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25 * vol, t + 0.07); g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+      src.start(t, Math.random()); src.stop(t + 0.25);
+    } else if (kind === 'whoosh') {
+      f.type = 'bandpass'; f.Q.value = 0.8;
+      f.frequency.setValueAtTime(400, t); f.frequency.exponentialRampToValueAtTime(1800, t + 0.35);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.22 * vol, t + 0.05); g.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+      src.start(t); src.stop(t + 0.5);
+    } else {
+      f.type = 'lowpass';
+      f.frequency.setValueAtTime(2400, t); f.frequency.exponentialRampToValueAtTime(140, t + 1.1);
+      g.gain.setValueAtTime(0.7 * vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
+      src.start(t); src.stop(t + 1.25);
+      // coup sourd
+      const o = audio.createOscillator(), og = audio.createGain();
+      o.type = 'sine'; o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(35, t + 0.4);
+      og.gain.setValueAtTime(0.6 * vol, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+      o.connect(og); og.connect(audio.destination); o.start(t); o.stop(t + 0.5);
+    }
+  } catch (e) { /* son indisponible */ }
 }
 
 // ------------------------------------------------------------------ effets
@@ -1367,22 +1600,15 @@ function sendPos(now) {
 }
 
 function remoteRocket(m) {
-  const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffa94d }));
-  mesh.position.fromArray(m.o);
-  scene.add(mesh);
-  rockets.push({ mesh, vel: new THREE.Vector3().fromArray(m.d).normalize().multiplyScalar(WEAPONS[1].speed), born: performance.now(), trail: 0, k: m.k, owner: m.id, remote: true });
-  sfx('rocket');
+  const fb = makeFireball(new THREE.Vector3().fromArray(m.o));
+  rockets.push({ mesh: fb.g, fb, vel: new THREE.Vector3().fromArray(m.d).normalize().multiplyScalar(WEAPONS[1].speed), born: performance.now(), trail: 0, k: m.k, owner: m.id, remote: true });
+  fireSound('whoosh', Math.max(0.2, 1 - player.pos.distanceTo(fb.g.position) / 40));
 }
 
 function remoteBoom(m) {
   const i = rockets.findIndex(r => r.remote && r.owner === m.id && r.k === m.k);
-  if (i >= 0) { scene.remove(rockets[i].mesh); rockets.splice(i, 1); }
-  const pos = new THREE.Vector3().fromArray(m.p);
-  burst(pos, 0xf97316, 30, 12);
-  burst(pos, 0xfde68a, 14, 7);
-  ring(pos, WEAPONS[1].splash, 0xf97316);
-  sfx('boom');
-  shake(Math.max(0, 0.5 - player.pos.distanceTo(pos) / 30));
+  if (i >= 0) { disposeFireball(rockets[i]); rockets.splice(i, 1); }
+  fireBoom(new THREE.Vector3().fromArray(m.p), WEAPONS[1].splash);
 }
 
 function onPvpMessage(m) {
@@ -1474,10 +1700,17 @@ if (EMBED) {
     } else if (m.t === 'resume') {
       embedPaused = false;
       if (PVP) protectedUntil = performance.now() + 4000;
-      if (!started) { started = true; restart(); }
-      menu.classList.remove('hidden');      // un clic est nécessaire pour reprendre la souris
-      document.getElementById('play').textContent = 'Reprendre';
-      document.getElementById('menuHint').textContent = 'Clique sur Reprendre (ou appuie sur Entrée) pour revenir dans l\'arène.';
+      if (!started) {
+        // tout premier départ : menu complet (commandes, sensibilité)
+        started = true; restart();
+        menu.classList.remove('hidden');
+        document.getElementById('play').textContent = 'Jouer';
+        document.getElementById('menuHint').textContent = 'Clique sur Jouer (ou appuie sur Entrée) pour entrer dans l\'arène.';
+      } else if (!locked) {
+        // après une série de questions : simple bandeau, un clic (ou Entrée) suffit pour reprendre la souris
+        menu.classList.add('hidden');
+        showRelock(true);
+      }
     } else if (m.t === 'ammo') {
       ammo[0] = m.ammo[0]; ammo[1] = m.ammo[1];
       if (ammo[0] > 0 || ammo[1] > 0) emptySent = false;
@@ -1492,6 +1725,9 @@ if (EMBED) {
   });
   // Entrée dans le menu = reprendre (pratique au clavier)
   document.addEventListener('keydown', e => {
+    if ((e.code === 'Enter' || e.code === 'NumpadEnter') && !relock.classList.contains('hidden') && !embedPaused && !e.repeat) {
+      showRelock(false); requestLock(); return;
+    }
     if ((e.code === 'Enter' || e.code === 'NumpadEnter') && !menu.classList.contains('hidden') && started && !embedPaused) {
       document.getElementById('play').click();
     }
@@ -1550,6 +1786,7 @@ function loop(now) {
       updateEnemyShots(dt, now);
     } else sendPos(now);
     updateEffects(dt);
+    updateFx(dt);
     updateHud(dt);
   } else if (!started) {
     // menu : la caméra tourne lentement au-dessus de l'arène
@@ -1563,4 +1800,4 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 // outils de test (captures automatiques) : ?debug
-if (new URLSearchParams(location.search).has('debug')) window.__fps = { player, scene, camera, enemies, remotes: () => remotes, get Med() { return Med; } };
+if (new URLSearchParams(location.search).has('debug')) window.__fps = { player, scene, camera, enemies, remotes: () => remotes, get Med() { return Med; }, fire: () => fire(performance.now()), punch: () => punch(performance.now()), rockets, dbg: () => ({ alive: player.alive, started, stop: stopUntil - performance.now(), menu: !menu.classList.contains('hidden'), embedPaused }) };

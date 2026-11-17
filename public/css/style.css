@@ -198,6 +198,8 @@ kbd { background: var(--bg2); border: 1px solid var(--muted); border-bottom-widt
 .qfoot { display: flex; flex-direction: column; justify-content: center; margin-top: 16px; min-height: 56px; align-items: center; gap: 12px; }
 .qexplain { border-left: 3px solid var(--vermilion); padding: 6px 14px; font-size: 19px; font-style: italic; max-width: 100%; text-align: left; }
 .qresult { font-family: var(--gothic); font-size: 36px; }
+.qpenalty { display: flex; align-items: center; gap: 8px; color: var(--vermilion); font-weight: 700; font-size: 19px; }
+.qpenalty b { font-variant-numeric: tabular-nums; min-width: 2.5em; }
 .qresult.good { color: var(--sinople); }
 .qresult.bad { color: var(--vermilion); }
 

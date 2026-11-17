@@ -107,8 +107,9 @@ class FpsSession extends Session {
   onLateJoin(p) { this.startQuiz(p, this.freq.burst, 'burst'); }
   onRejoin(p) { p.spawned = false; p.reviveAt = 0; p.guard = false; this.startQuiz(p, 1, 'burst'); }
 
-  onAnswer(p, { correct }) {
-    const g = correct ? GAIN.correct : (this.settings.accommodations ? GAIN.wrongAcc : GAIN.wrong);
+  onAnswer(p, { correct, hasty }) {
+    // réponse au hasard (anti-hasard) : pas de munitions
+    const g = hasty ? [0, 0] : correct ? GAIN.correct : (this.settings.accommodations ? GAIN.wrongAcc : GAIN.wrong);
     const before = p.ammo.slice();
     p.ammo = p.ammo.map((a, i) => Math.min(MAX_AMMO[i], a + g[i]));
     const gained = p.ammo.map((a, i) => a - before[i]);

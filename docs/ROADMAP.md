@@ -18,13 +18,13 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 - [x] **[fait]** DA « manuscrit enluminé » : vélin sur pierre, gothique, lettrines, bannières héraldiques, polices embarquées (session 9)
 - [ ] Comprendre l'erreur « got '<' » vue en ligne sur la vue élève du FPS (session 9 : contournée, cause inconnue)
 - [ ] **Retours test du 12 nov. (Tirtho)** :
-  - [ ] **Brave (navigation privée)** : « Impossible de charger /modes/fps/client.js » au moment de rejoindre
+  - [x] **[fait]** (session 11 : fichiers renommés `jeu.js` + message clair) **Brave (navigation privée)** : « Impossible de charger /modes/fps/client.js » au moment de rejoindre
         (Firefox OK). Piste : les boucliers / listes anti-pub de Brave bloquent l'URL → renommer le fichier
         (ex. `jeu.js`) ou le servir autrement, et afficher un message clair « désactive les boucliers »
-  - [ ] **Après chaque série de questions**, le menu des commandes / réglages du FPS revient au premier plan :
+  - [x] **[fait]** (session 11 : bandeau « clique pour reprendre ») **Après chaque série de questions**, le menu des commandes / réglages du FPS revient au premier plan :
         le remplacer par le petit bandeau « clique pour reprendre » (le menu complet seulement au premier départ)
-  - [ ] **Épée au corps à corps** pas terrible (visuel et sensation du coup) : à retravailler
-  - [ ] **Bâton de feu** : c'était un lance-roquettes → il faut une **grosse boule de feu** bien visible
+  - [x] **[fait]** (session 11 : élan, taille, arc lumineux, impact) **Épée au corps à corps** pas terrible (visuel et sensation du coup) : à retravailler
+  - [x] **[fait]** (session 11 : boule de feu dessinée par le code, à changer si besoin) **Bâton de feu** : c'était un lance-roquettes → il faut une **grosse boule de feu** bien visible
         (taille, flammes, traînée, explosion plus forte)
   - [ ] **[idée]** Remettre de « vraies » armes plus tard (pack Kenney *Blaster Kit* ?), « ça peut être drôle » —
         par exemple un réglage de thème d'armes au lancement
@@ -97,6 +97,7 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 
 ## Questions & quiz
 
+- [x] **[fait]** **Anti-hasard** : mauvaise réponse plus rapide que le temps de lecture → blocage 5 à 14 s, colonne « Au hasard » pour le prof (session 11)
 - [ ] **Fenêtre de questions jolie, agréable et sobre** : retravailler police et couleurs pour la lecture
       (la DA « manuscrit » peut rester autour, mais les questions doivent rester simples à lire)
 - [x] **[fait]** Explication par question (session 4)

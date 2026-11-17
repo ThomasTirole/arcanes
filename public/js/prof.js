@@ -599,7 +599,7 @@
       : r.classAccuracy >= 60 ? 'Bien, quelques points à consolider.'
         : r.classAccuracy >= 40 ? 'Mitigé — un rappel serait utile.' : 'À reprendre en classe.';
     $('#resBest').textContent = r.bestAccuracy ? `${r.bestAccuracy.name} · ${r.bestAccuracy.accuracy}%` : '—';
-    renderBoard($('#resTable'), r.rows, { columns: cols, bestId: r.bestAccuracy && r.bestAccuracy.id });
+    renderBoard($('#resTable'), r.rows, { columns: cols, bestId: r.bestAccuracy && r.bestAccuracy.id, showHasty: true });
 
     const qs = r.questions.filter(q => q.asked > 0)
       .map(q => ({ ...q, pct: Math.round((q.correct / q.asked) * 100) }))
