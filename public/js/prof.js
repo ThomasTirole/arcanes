@@ -3,7 +3,11 @@
   const UI = window.UI;
   const { $, el, fmtTime, show, dot, pctColor, renderPodium, renderBoard, loadMode } = UI;
 
-  let password = sessionStorage.getItem('arcanes-pw') || '';
+  // connexion : jeton gardé dans le navigateur (30 jours), on reste connecté d'une fois à l'autre
+  const TOKEN_KEY = 'arcanes-token';
+  let token = '';
+  try { token = localStorage.getItem(TOKEN_KEY) || ''; sessionStorage.removeItem('arcanes-pw'); } catch (e) { /* stockage bloqué */ }
+  let me = null;
   let editing = null;          // { id|null, title, questions }
   let launchQuiz = null;
   let modes = [], launchMode = null;
@@ -17,38 +21,172 @@
   async function api(method, url, body) {
     const res = await fetch(url, {
       method,
-      headers: { 'Content-Type': 'application/json', 'x-admin-password': password },
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
       body: body ? JSON.stringify(body) : undefined,
     });
     const data = await res.json().catch(() => ({}));
-    if (res.status === 401) { logout(); throw new Error('Session expirée.'); }
+    if (res.status === 401) { logout(); throw new Error(data.error || 'Connexion expirée.'); }
+    if (data.mustChange) { openPassword(true); throw new Error(data.error); }
     if (!res.ok) throw new Error(data.error || 'Erreur serveur.');
     return data;
   }
 
+  function setSession(data) {
+    token = data.token;
+    me = data.user;
+    try { localStorage.setItem(TOKEN_KEY, token); } catch (e) { /* rien */ }
+  }
+
   function logout() {
-    password = '';
-    sessionStorage.removeItem('arcanes-pw');
-    go('login');
+    token = ''; me = null;
+    try { localStorage.removeItem(TOKEN_KEY); } catch (e) { /* rien */ }
+    sessionStorage.removeItem('arcanes-room');
+    showLogin();
   }
 
   // ---------------------------------------------------------------- connexion
-  $('#loginForm').addEventListener('submit', async e => {
+  function showAuthForm(id) {
+    ['loginForm', 'registerForm', 'setupForm'].forEach(f => $('#' + f).classList.toggle('hidden', f !== id));
+    $('#' + id).querySelector('[data-err]').textContent = '';
+    const first = $('#' + id).querySelector('input');
+    if (first) setTimeout(() => first.focus(), 0);
+  }
+
+  async function showLogin() {
+    go('login');
+    let st = { setup: false };
+    try { st = await (await fetch('/api/auth/state')).json(); } catch (e) { /* hors ligne */ }
+    showAuthForm(st.setup ? 'setupForm' : 'loginForm');
+  }
+
+  document.querySelectorAll('[data-goto]').forEach(a => a.addEventListener('click', e => {
     e.preventDefault();
-    const pw = $('#pwInput').value;
-    const res = await fetch('/api/login', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }),
+    showAuthForm(a.dataset.goto);
+  }));
+
+  // envoie un formulaire d'authentification et ouvre la session
+  function authForm(id, url, readBody) {
+    const form = $('#' + id);
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const err = form.querySelector('[data-err]');
+      const btn = form.querySelector('button[type=submit]');
+      err.textContent = '';
+      btn.disabled = true;
+      try {
+        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(readBody(form)) });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { err.textContent = data.error || 'Erreur.'; return; }
+        setSession(data);
+        form.reset();
+        afterLogin();
+      } catch (e2) { err.textContent = 'Serveur injoignable.'; } finally { btn.disabled = false; }
     });
-    if (!res.ok) { $('#loginError').textContent = 'Mot de passe incorrect.'; return; }
-    password = pw;
-    sessionStorage.setItem('arcanes-pw', pw);
-    afterLogin();
-  });
+  }
+  const fields = form => Object.fromEntries(new FormData(form).entries());
+  authForm('loginForm', '/api/auth/login', () => ({ email: $('#loginEmail').value, password: $('#loginPw').value }));
+  authForm('registerForm', '/api/auth/register', fields);
+  authForm('setupForm', '/api/auth/setup', fields);
 
   function afterLogin() {
+    if (me && me.mustChange) { openPassword(true); return; }
+    $('#accountName').textContent = me ? me.name : '';
+    $('#openAdmin').classList.toggle('hidden', !me || me.role !== 'admin');
     const saved = sessionStorage.getItem('arcanes-room');
     if (saved) rejoinRoom(saved); else loadDash();
   }
+
+  // ---------------------------------------------------------------- mot de passe
+  let pwForced = false;
+  function openPassword(forced) {
+    pwForced = !!forced;
+    $('#pwForced').classList.toggle('hidden', !forced);
+    $('#pwOldField').classList.toggle('hidden', !!forced);
+    $('#pwCancel').classList.toggle('hidden', !!forced);
+    $('#passwordForm').reset();
+    $('#passwordForm [data-err]').textContent = '';
+    go('password');
+  }
+  $('#openPassword').addEventListener('click', e => { e.preventDefault(); openPassword(false); });
+  $('#pwCancel').addEventListener('click', () => loadDash());
+  $('#logout').addEventListener('click', e => { e.preventDefault(); logout(); });
+  $('#passwordForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = fields(e.target);
+    const err = $('#passwordForm [data-err]');
+    if (f.newPassword !== f.confirm) { err.textContent = 'Les deux nouveaux mots de passe ne sont pas identiques.'; return; }
+    try {
+      const res = await fetch('/api/auth/password', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ oldPassword: f.oldPassword, newPassword: f.newPassword }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) { logout(); return; }
+      if (!res.ok) { err.textContent = data.error || 'Erreur.'; return; }
+      setSession(data);
+      afterLogin();
+    } catch (e2) { err.textContent = 'Serveur injoignable.'; }
+  });
+
+  // ---------------------------------------------------------------- administration
+  const fmtDate = t => (t ? new Date(t).toLocaleDateString('fr-CH') : '—');
+  $('#openAdmin').addEventListener('click', e => { e.preventDefault(); loadAdmin(); });
+  $('#adminBack').addEventListener('click', () => loadDash());
+
+  async function loadAdmin(notice) {
+    go('admin');
+    $('#adminError').textContent = '';
+    let d;
+    try { d = await api('GET', '/api/admin/users'); } catch (e) { $('#adminError').textContent = e.message; return; }
+    $('#inviteList').replaceChildren(...(d.invites.length ? d.invites.map(inv => el('div', { class: 'admrow' },
+      el('span', { class: 'invcode' }, inv.code),
+      el('span', { class: 'who' }, inv.note || el('span', { class: 'muted' }, 'Sans note'),
+        el('span', { class: 'meta' }, ` · valable jusqu'au ${fmtDate(inv.expires)}`)),
+      el('button', { class: 'btn small', onclick: () => copy(inv.code) }, 'Copier'),
+      el('button', { class: 'btn small ghost', onclick: async () => { await api('DELETE', '/api/admin/invites/' + inv.code); loadAdmin(); } }, 'Supprimer'),
+    )) : [el('p', { class: 'muted', style: 'margin:0' }, 'Aucun code en attente.')]));
+
+    $('#userList').replaceChildren(...d.users.map(u => {
+      const self = me && u.id === me.id;
+      const row = el('div', { class: 'admrow' + (u.disabled ? ' off' : '') },
+        el('div', { class: 'who' }, el('b', null, u.name + (u.role === 'admin' ? ' (administrateur)' : '')),
+          el('span', { class: 'meta' }, `${u.email} · ${u.quizzes} quiz · inscrit le ${fmtDate(u.createdAt)} · dernière connexion ${fmtDate(u.lastLogin)}`
+            + (u.disabled ? ' · désactivé' : '') + (u.mustChange ? ' · mot de passe provisoire' : ''))),
+        el('button', { class: 'btn small', onclick: () => resetPw(u, row) }, 'Mot de passe provisoire'),
+        self ? null : el('button', { class: 'btn small', onclick: async () => {
+          await api('POST', `/api/admin/users/${u.id}/role`, { role: u.role === 'admin' ? 'prof' : 'admin' }); loadAdmin();
+        } }, u.role === 'admin' ? 'Retirer admin' : 'Rendre admin'),
+        self ? null : el('button', { class: 'btn small ghost', onclick: async () => {
+          if (!u.disabled && !confirm(`Désactiver le compte de ${u.name} ? Il ne pourra plus se connecter (ses quiz sont gardés).`)) return;
+          await api('POST', `/api/admin/users/${u.id}/disabled`, { disabled: !u.disabled }); loadAdmin();
+        } }, u.disabled ? 'Réactiver' : 'Désactiver'),
+      );
+      return row;
+    }));
+  }
+
+  async function resetPw(u, row) {
+    if (!confirm(`Créer un mot de passe provisoire pour ${u.name} ? Son mot de passe actuel ne marchera plus.`)) return;
+    try {
+      const { password } = await api('POST', `/api/admin/users/${u.id}/reset`);
+      const box = el('div', { class: 'tempPw' }, `Mot de passe provisoire de ${u.name} : `, el('b', { class: 'invcode', style: 'font-size:20px' }, password),
+        el('div', { class: 'meta muted' }, 'Donne-le-lui : il devra en choisir un nouveau à sa prochaine connexion. Il ne sera plus affiché.'));
+      row.after(box);
+    } catch (e) { $('#adminError').textContent = e.message; }
+  }
+
+  function copy(text) {
+    if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
+  }
+
+  $('#inviteForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    try {
+      await api('POST', '/api/admin/invites', { note: e.target.note.value });
+      e.target.reset();
+      loadAdmin();
+    } catch (e2) { $('#adminError').textContent = e2.message; }
+  });
 
   // ---------------------------------------------------------------- liste
   async function loadDash() {
@@ -330,14 +468,14 @@
       localStorage.setItem('arcanes-settings-' + launchMode.id, JSON.stringify(settings));
       localStorage.setItem('arcanes-mode', launchMode.id);
     } catch (e) { /* rien */ }
-    socket.emit('host:create', { password, quizId: launchQuiz.id, mode: launchMode.id, settings }, res => {
+    socket.emit('host:create', { token, quizId: launchQuiz.id, mode: launchMode.id, settings }, res => {
       if (!res || res.error) { $('#launchError').textContent = (res && res.error) || 'Erreur.'; return; }
       enterRoom(res);
     });
   });
 
   function rejoinRoom(code) {
-    socket.emit('host:rejoin', { password, code }, res => {
+    socket.emit('host:rejoin', { token, code }, res => {
       if (!res || res.error) { sessionStorage.removeItem('arcanes-room'); room = null; loadDash(); return; }
       enterRoom(res);
     });
@@ -365,7 +503,7 @@
   }
 
   socket.on('connect', () => {
-    if (password && room) rejoinRoom(room.code);
+    if (token && room) rejoinRoom(room.code);
   });
 
   socket.on('room:lobby', onLobby);
@@ -534,9 +672,10 @@
   });
 
   // ---------------------------------------------------------------- démarrage
-  if (password) {
-    fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) })
-      .then(r => (r.ok ? afterLogin() : logout()))
-      .catch(() => go('login'));
-  } else go('login');
+  if (token) {
+    fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } })
+      .then(r => (r.ok ? r.json() : Promise.reject()))
+      .then(d => { me = d.user; afterLogin(); })
+      .catch(() => logout());
+  } else showLogin();
 })();

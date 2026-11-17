@@ -120,11 +120,12 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 
 ## Technique
 
-- [ ] **Multi-tenant** : n'importe qui peut créer un compte (inscription / connexion) et gérer ses propres
-      quiz et parties, au lieu d'un seul mot de passe prof (remplace « Comptes prof multiples »)
+- [x] **[fait]** **Multi-tenant** : comptes profs sur invitation, quiz et parties séparés, mot de passe
+      provisoire par l'admin, page « Comptes et invitations » (session 10)
+- [ ] **[idée]** Partage de quiz entre profs (bibliothèque commune) — écarté pour l'instant (session 10)
+- [ ] **[idée]** Mot de passe oublié par e-mail (SMTP Infomaniak) — écarté pour l'instant (session 10)
 - [x] **[fait]** Dépôt GitHub (session 4) — déploiement auto par SSH abandonné, mise à jour via « Build »
 - [ ] Sauvegarde automatique de `data/quizzes.json` (copie datée, ou export vers GitHub)
-- [ ] Comptes prof multiples (collègues) avec quiz séparés
 - [ ] Tester la charge (30 élèves) et la consommation réseau à l'école
 
 ## Boîte à idées

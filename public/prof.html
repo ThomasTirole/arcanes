@@ -11,6 +11,21 @@
     .page { width: min(1000px, 100%); margin: 0 auto; padding: 28px 16px 60px; }
     .page.screen { justify-content: flex-start; align-items: stretch; }
     .topline { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .accountbar { display: flex; gap: 18px; flex-wrap: wrap; align-items: baseline; margin: -8px 0 18px; color: var(--muted); font-size: 16px; }
+    .accountbar #accountName { color: var(--text); font-weight: 700; margin-right: auto; }
+    .accountbar a, .authswitch a { color: inherit; }
+    .accountbar a:hover { color: var(--text); }
+    .authswitch { margin: 0; font-size: 16px; text-align: center; }
+    .authswitch a { color: var(--vermilion); font-weight: 700; }
+    .authform h2 { margin: 0; }
+    .admrow { display: flex; align-items: center; gap: 12px; padding: 10px 2px; border-bottom: 1px dotted var(--line); flex-wrap: wrap; }
+    .admrow:last-child { border-bottom: none; }
+    .admrow .who { flex: 1; min-width: 220px; }
+    .admrow .who b { display: block; }
+    .admrow .meta { color: var(--muted); font-size: 15px; }
+    .admrow.off .who { opacity: .5; }
+    .invcode { font-size: 24px; letter-spacing: 4px; font-weight: 700; color: var(--vermilion); font-variant-numeric: lining-nums tabular-nums; user-select: all; }
+    .tempPw { background: rgba(143,35,20,.08); border-left: 3px solid var(--vermilion); padding: 8px 12px; width: 100%; }
     .topline h1 { margin: 0; font-size: 46px; font-weight: 400; color: #efdcae; text-shadow: 0 3px 0 #000; }
     .quizlist { display: flex; flex-direction: column; }
     .quizlist:not(:empty) { --text: var(--ink); --muted: var(--ink-soft); --line: rgba(74,48,24,.32); color: var(--ink); background: radial-gradient(ellipse at center, transparent 58%, rgba(110,72,28,.32) 100%), var(--vellum); border: 1px solid #7d5f36; outline: 3px double rgba(143,35,20,.55); outline-offset: -11px; padding: 22px 30px; box-shadow: 0 18px 40px rgba(0,0,0,.6); }
@@ -80,17 +95,107 @@
 </head>
 <body>
 
-<!-- Connexion -->
+<!-- Connexion / inscription / premier compte -->
 <section id="login" class="screen">
   <h1 class="logo">Arcanes</h1>
   <p class="tagline">Espace enseignant</p>
-  <form id="loginForm" class="card stack" style="width:min(360px,100%)">
-    <label class="field">Mot de passe
-      <input id="pwInput" type="password" autocomplete="current-password" required>
+
+  <form id="loginForm" class="card stack authform" style="width:min(380px,100%)">
+    <label class="field">Adresse e-mail
+      <input id="loginEmail" type="text" inputmode="email" autocomplete="username" required>
     </label>
-    <button class="btn primary" type="submit">Entrer</button>
-    <div id="loginError" class="error"></div>
+    <label class="field">Mot de passe
+      <input id="loginPw" type="password" autocomplete="current-password" required>
+    </label>
+    <button class="btn primary" type="submit">Se connecter</button>
+    <div class="error" data-err></div>
+    <p class="authswitch">Un collègue t'a donné un code d'invitation ? <a href="#" data-goto="registerForm">Créer mon compte</a></p>
+    <p class="authswitch muted">Mot de passe oublié : demande un mot de passe provisoire à l'administrateur d'Arcanes.</p>
   </form>
+
+  <form id="registerForm" class="card stack authform hidden" style="width:min(380px,100%)">
+    <h2>Créer mon compte</h2>
+    <label class="field">Code d'invitation
+      <input name="code" type="text" autocomplete="off" required placeholder="ABCD2345" style="letter-spacing:3px">
+    </label>
+    <label class="field">Nom affiché
+      <input name="name" type="text" autocomplete="name" required maxlength="60">
+    </label>
+    <label class="field">Adresse e-mail
+      <input name="email" type="text" inputmode="email" autocomplete="username" required>
+    </label>
+    <label class="field">Mot de passe (8 caractères minimum)
+      <input name="password" type="password" autocomplete="new-password" required minlength="8">
+    </label>
+    <button class="btn primary" type="submit">Créer mon compte</button>
+    <div class="error" data-err></div>
+    <p class="authswitch"><a href="#" data-goto="loginForm">J'ai déjà un compte</a></p>
+  </form>
+
+  <form id="setupForm" class="card stack authform hidden" style="width:min(420px,100%)">
+    <h2>Premier compte</h2>
+    <p class="muted" style="margin:0">Arcanes passe aux comptes personnels. Crée le compte administrateur : les quiz
+      déjà enregistrés y seront rattachés. Le code de mise en route est l'ancien mot de passe prof.</p>
+    <label class="field">Code de mise en route
+      <input name="setupCode" type="password" autocomplete="off" required>
+    </label>
+    <label class="field">Nom affiché
+      <input name="name" type="text" autocomplete="name" required maxlength="60">
+    </label>
+    <label class="field">Adresse e-mail
+      <input name="email" type="text" inputmode="email" autocomplete="username" required>
+    </label>
+    <label class="field">Mot de passe (8 caractères minimum)
+      <input name="password" type="password" autocomplete="new-password" required minlength="8">
+    </label>
+    <button class="btn primary" type="submit">Créer le compte administrateur</button>
+    <div class="error" data-err></div>
+  </form>
+</section>
+
+<!-- Changer de mot de passe (obligatoire après un mot de passe provisoire) -->
+<section id="password" class="screen hidden">
+  <form id="passwordForm" class="card stack" style="width:min(400px,100%)">
+    <h2>Changer mon mot de passe</h2>
+    <p id="pwForced" class="muted hidden" style="margin:0">Tu t'es connecté avec un mot de passe provisoire : choisis-en un nouveau.</p>
+    <label class="field" id="pwOldField">Mot de passe actuel
+      <input name="oldPassword" type="password" autocomplete="current-password">
+    </label>
+    <label class="field">Nouveau mot de passe (8 caractères minimum)
+      <input name="newPassword" type="password" autocomplete="new-password" required minlength="8">
+    </label>
+    <label class="field">Nouveau mot de passe, encore une fois
+      <input name="confirm" type="password" autocomplete="new-password" required minlength="8">
+    </label>
+    <div class="row">
+      <button class="btn primary" type="submit">Enregistrer</button>
+      <button class="btn ghost" type="button" id="pwCancel">Annuler</button>
+    </div>
+    <div class="error" data-err></div>
+  </form>
+</section>
+
+<!-- Administration des comptes -->
+<section id="admin" class="screen page hidden">
+  <div class="topline">
+    <h1>Comptes</h1>
+    <button class="btn" id="adminBack">Retour à mes quiz</button>
+  </div>
+  <div class="card stack">
+    <h2 style="margin:0">Inviter un collègue</h2>
+    <p class="muted" style="margin:0">Chaque code ne sert qu'une fois et reste valable 14 jours. Donne-le au collègue avec
+      l'adresse du site : il choisit lui-même son mot de passe.</p>
+    <form id="inviteForm" class="row">
+      <input name="note" type="text" class="grow" maxlength="80" placeholder="Pour qui ? (facultatif, ex. Julie, maths)" style="width:auto">
+      <button class="btn primary" type="submit">Créer un code</button>
+    </form>
+    <div id="inviteList"></div>
+  </div>
+  <div class="card stack" style="margin-top:22px">
+    <h2 style="margin:0">Profs inscrits</h2>
+    <div id="userList"></div>
+    <div id="adminError" class="error"></div>
+  </div>
 </section>
 
 <!-- Liste des quiz -->
@@ -102,6 +207,12 @@
       <label class="btn">Importer (Excel, CSV, JSON)<input id="importNew" type="file" accept=".xlsx,.xls,.csv,.json" hidden></label>
       <button class="btn primary" id="newQuiz">+ Nouveau quiz</button>
     </div>
+  </div>
+  <div id="accountBar" class="accountbar">
+    <span id="accountName"></span>
+    <a href="#" id="openAdmin" class="hidden">Comptes et invitations</a>
+    <a href="#" id="openPassword">Changer mon mot de passe</a>
+    <a href="#" id="logout">Se déconnecter</a>
   </div>
   <div id="quizList" class="quizlist"></div>
   <div id="dashError" class="error" style="margin-top:12px"></div>

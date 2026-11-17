@@ -7,17 +7,20 @@ const crypto = require('crypto');
 const fs = require('fs');
 const { Server } = require('socket.io');
 const { QuizStore } = require('./lib/quizzes');
+const { AccountStore, AuthError } = require('./lib/accounts');
 const modes = require('./modes');
 
 const PORT = process.env.PORT || 3000;
+// sert seulement de « code de mise en route » pour créer le tout premier compte (administrateur)
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'arcanes';
 const DATA_DIR = process.env.ARCANES_DATA_DIR || path.join(__dirname, 'data');
 
 if (!process.env.ADMIN_PASSWORD) {
-  console.warn('[attention] ADMIN_PASSWORD non défini : mot de passe prof par défaut "arcanes". Change-le en production !');
+  console.warn('[attention] ADMIN_PASSWORD non défini : code de mise en route par défaut "arcanes". Change-le en production !');
 }
 
 const quizzes = new QuizStore(DATA_DIR);
+const accounts = new AccountStore(DATA_DIR);
 
 // ---------------------------------------------------------------------------
 // HTTP
@@ -29,40 +32,120 @@ for (const { Mode, publicDir } of modes.entries()) {
   app.use(`/modes/${Mode.id}`, express.static(publicDir));
 }
 
+app.set('trust proxy', 1);   // derrière le proxy d'Infomaniak : vraie adresse IP pour le frein anti-essais
+
+// ---- comptes ---------------------------------------------------------------
+const bearer = req => (req.get('authorization') || '').replace(/^Bearer\s+/i, '');
+
 function auth(req, res, next) {
-  if (req.get('x-admin-password') === ADMIN_PASSWORD) return next();
-  res.status(401).json({ error: 'Mot de passe incorrect.' });
+  const u = accounts.userFromToken(bearer(req));
+  if (!u) return res.status(401).json({ error: 'Connexion expirée : reconnecte-toi.' });
+  req.user = u;
+  next();
+}
+function adminOnly(req, res, next) {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Réservé aux administrateurs.' });
+  next();
+}
+// tant qu'il doit changer son mot de passe provisoire, le prof ne peut rien faire d'autre
+function ready(req, res, next) {
+  if (req.user.mustChange) return res.status(403).json({ error: 'Change d\'abord ton mot de passe provisoire.', mustChange: true });
+  next();
+}
+const P = [auth, ready];
+
+// frein contre les essais de mots de passe : 10 échecs / 10 min par adresse IP
+const attempts = new Map();
+function limited(req) {
+  const a = attempts.get(req.ip);
+  return a && a.count >= 10 && Date.now() < a.until;
+}
+function failed(req) {
+  const a = attempts.get(req.ip);
+  if (!a || Date.now() > a.until) attempts.set(req.ip, { count: 1, until: Date.now() + 10 * 60000 });
+  else a.count++;
 }
 
-app.post('/api/login', (req, res) => {
-  if (req.body && req.body.password === ADMIN_PASSWORD) return res.json({ ok: true });
-  res.status(401).json({ error: 'Mot de passe incorrect.' });
+function sendAuth(res, u) { res.json({ token: accounts.sign(u), user: accounts.publicUser(u) }); }
+function authRoute(fn) {
+  return (req, res) => {
+    if (limited(req)) return res.status(429).json({ error: 'Trop d\'essais : réessaie dans quelques minutes.' });
+    try { fn(req, res); } catch (e) {
+      if (e instanceof AuthError) { failed(req); return res.status(400).json({ error: e.message }); }
+      console.error(e); res.status(500).json({ error: 'Erreur serveur.' });
+    }
+  };
+}
+
+app.get('/api/auth/state', (req, res) => res.json({ setup: !accounts.hasUsers() }));
+
+app.post('/api/auth/setup', authRoute((req, res) => {
+  const b = req.body || {};
+  const u = accounts.setupAdmin(b, b.setupCode, ADMIN_PASSWORD);
+  const n = quizzes.adoptOrphans(u.id);
+  if (!n) quizzes.giveSample(u.id);
+  console.log(`[comptes] Administrateur créé (${u.email}), ${n} quiz existant(s) rattaché(s).`);
+  sendAuth(res, u);
+}));
+
+app.post('/api/auth/register', authRoute((req, res) => {
+  const u = accounts.register(req.body || {});
+  quizzes.giveSample(u.id);
+  sendAuth(res, u);
+}));
+
+app.post('/api/auth/login', authRoute((req, res) => {
+  const b = req.body || {};
+  sendAuth(res, accounts.login(b.email, b.password));
+}));
+
+app.get('/api/auth/me', auth, (req, res) => res.json({ user: accounts.publicUser(req.user) }));
+
+app.post('/api/auth/password', auth, authRoute((req, res) => {
+  const b = req.body || {};
+  sendAuth(res, accounts.changePassword(req.user, b.oldPassword, b.newPassword));
+}));
+
+// ---- administration des comptes -------------------------------------------
+const A = [auth, ready, adminOnly];
+const adminRoute = fn => (req, res) => {
+  try { fn(req, res); } catch (e) { res.status(e instanceof AuthError ? 400 : 500).json({ error: e.message }); }
+};
+app.get('/api/admin/users', ...A, (req, res) => {
+  const counts = quizzes.countByOwner();
+  res.json({ users: accounts.listUsers().map(u => ({ ...u, quizzes: counts[u.id] || 0 })), invites: accounts.listInvites() });
 });
+app.post('/api/admin/invites', ...A, adminRoute((req, res) => res.json(accounts.createInvite(req.user, (req.body || {}).note))));
+app.delete('/api/admin/invites/:code', ...A, adminRoute((req, res) => { accounts.deleteInvite(req.params.code); res.json({ ok: true }); }));
+app.post('/api/admin/users/:id/reset', ...A, adminRoute((req, res) => res.json({ password: accounts.resetPassword(req.params.id) })));
+app.post('/api/admin/users/:id/disabled', ...A, adminRoute((req, res) => { accounts.setDisabled(req.user, req.params.id, (req.body || {}).disabled); res.json({ ok: true }); }));
+app.post('/api/admin/users/:id/role', ...A, adminRoute((req, res) => { accounts.setRole(req.user, req.params.id, (req.body || {}).role); res.json({ ok: true }); }));
 
-app.get('/api/modes', auth, (req, res) => res.json(modes.list()));
+// ---- quiz du prof connecté ---------------------------------------------------
+app.get('/api/modes', ...P, (req, res) => res.json(modes.list()));
 
-app.get('/api/quizzes', auth, (req, res) => res.json(quizzes.list()));
+app.get('/api/quizzes', ...P, (req, res) => res.json(quizzes.list(req.user.id)));
 
-app.get('/api/quizzes/:id', auth, (req, res) => {
-  const q = quizzes.get(req.params.id);
+app.get('/api/quizzes/:id', ...P, (req, res) => {
+  const q = quizzes.get(req.params.id, req.user.id);
   if (!q) return res.status(404).json({ error: 'Quiz introuvable.' });
   res.json(q);
 });
 
-app.post('/api/quizzes', auth, (req, res) => {
-  try { res.json(quizzes.create(req.body)); } catch (e) { res.status(400).json({ error: e.message }); }
+app.post('/api/quizzes', ...P, (req, res) => {
+  try { res.json(quizzes.create(req.body, req.user.id)); } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
-app.put('/api/quizzes/:id', auth, (req, res) => {
+app.put('/api/quizzes/:id', ...P, (req, res) => {
   try {
-    const q = quizzes.update(req.params.id, req.body);
+    const q = quizzes.update(req.params.id, req.body, req.user.id);
     if (!q) return res.status(404).json({ error: 'Quiz introuvable.' });
     res.json(q);
   } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
-app.delete('/api/quizzes/:id', auth, (req, res) => {
-  if (!quizzes.remove(req.params.id)) return res.status(404).json({ error: 'Quiz introuvable.' });
+app.delete('/api/quizzes/:id', ...P, (req, res) => {
+  if (!quizzes.remove(req.params.id, req.user.id)) return res.status(404).json({ error: 'Quiz introuvable.' });
   res.json({ ok: true });
 });
 
@@ -105,23 +188,32 @@ io.on('connection', socket => {
   const reply = (cb, data) => { if (typeof cb === 'function') cb(data); };
 
   // ----- prof --------------------------------------------------------------
+  const hostUser = msg => {
+    const u = accounts.userFromToken(msg.token);
+    return u && !u.mustChange ? u : null;
+  };
+
   socket.on('host:create', (msg = {}, cb) => {
-    if (msg.password !== ADMIN_PASSWORD) return reply(cb, { error: 'Mot de passe incorrect.' });
+    const user = hostUser(msg);
+    if (!user) return reply(cb, { error: 'Connexion expirée : reconnecte-toi.' });
     const Mode = modes.get(msg.mode || 'arena');
     if (!Mode) return reply(cb, { error: 'Mode de jeu inconnu.' });
-    const quiz = quizzes.snapshot(msg.quizId);
+    const quiz = quizzes.snapshot(msg.quizId, user.id);
     if (!quiz || !quiz.questions.length) return reply(cb, { error: 'Quiz introuvable ou vide.' });
     const code = newCode();
     const room = new Mode(io, code, quiz, msg.settings);
+    room.ownerId = user.id;
     rooms.set(code, room);
     joinAsHost(socket, room);
     reply(cb, { ok: true, code, lobby: room.lobbyInfo(), info: room.clientInfo() });
   });
 
   socket.on('host:rejoin', (msg = {}, cb) => {
-    if (msg.password !== ADMIN_PASSWORD) return reply(cb, { error: 'Mot de passe incorrect.' });
+    const user = hostUser(msg);
+    if (!user) return reply(cb, { error: 'Connexion expirée : reconnecte-toi.' });
     const room = rooms.get(String(msg.code));
-    if (!room) return reply(cb, { error: 'Partie introuvable.' });
+    // seul le prof qui a lancé la partie peut la reprendre
+    if (!room || room.ownerId !== user.id) return reply(cb, { error: 'Partie introuvable.' });
     joinAsHost(socket, room);
     reply(cb, { ok: true, code: room.code, lobby: room.lobbyInfo(), info: room.clientInfo(), results: room.results });
   });

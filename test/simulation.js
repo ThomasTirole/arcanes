@@ -9,8 +9,14 @@ const URL = `http://localhost:${PORT}`;
 const PW = 'test-pw';
 const GAME_SECONDS = Number(process.env.SIM_SECONDS || 25);
 
+// dossier de données « d'avant les comptes » : un quiz sans propriétaire, à rattacher à l'administrateur
+const fs = require('fs');
+const DATA = fs.mkdtempSync(path.join(require('os').tmpdir(), 'arcanes-'));
+fs.writeFileSync(path.join(DATA, 'quizzes.json'), JSON.stringify([{ id: 'ancien', title: 'Ancien quiz', updatedAt: 1,
+  questions: [{ text: 'Q ?', choices: ['a', 'b'], correct: [0] }] }]));
+
 const server = spawn(process.execPath, [path.join(__dirname, '..', 'server.js')], {
-  env: { ...process.env, PORT, ADMIN_PASSWORD: PW, ARCANES_DATA_DIR: require('fs').mkdtempSync(path.join(require('os').tmpdir(), 'arcanes-')) },
+  env: { ...process.env, PORT, ADMIN_PASSWORD: PW, ARCANES_DATA_DIR: DATA },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
 let serverErr = '';
@@ -26,10 +32,67 @@ async function main() {
     setTimeout(() => rej(new Error('serveur pas démarré')), 5000);
   });
 
+  // ---------------------------------------------------------------- comptes
+  const J = { 'Content-Type': 'application/json' };
+  const post = async (url, body, token) => {
+    const r = await fetch(URL + url, { method: 'POST', headers: token ? { ...J, Authorization: 'Bearer ' + token } : J, body: JSON.stringify(body || {}) });
+    return { status: r.status, data: await r.json().catch(() => ({})) };
+  };
+  const get = async (url, token) => {
+    const r = await fetch(URL + url, { headers: { Authorization: 'Bearer ' + token } });
+    return { status: r.status, data: await r.json().catch(() => ({})) };
+  };
+  if (!(await (await fetch(URL + '/api/auth/state')).json()).setup) fail('mise en route non proposée');
+  const adminBody = { name: 'Tirtho', email: 'Prof@Exemple.ch', password: 'motdepasse1' };
+  if ((await post('/api/auth/setup', { ...adminBody, setupCode: 'faux' })).status !== 400) fail('mise en route avec un mauvais code');
+  const setup = await post('/api/auth/setup', { ...adminBody, setupCode: PW });
+  if (setup.status !== 200 || setup.data.user.role !== 'admin') fail('mise en route : ' + JSON.stringify(setup.data));
+  const ADM = setup.data.token;
+  if ((await post('/api/auth/setup', { ...adminBody, email: 'x@y.ch', setupCode: PW })).status !== 400) fail('2e administrateur par mise en route');
+  const admQuiz = (await get('/api/quizzes', ADM)).data;
+  if (admQuiz.length !== 1 || admQuiz[0].id !== 'ancien') fail('quiz existant pas rattaché à l\'admin : ' + JSON.stringify(admQuiz));
+  if (!fs.readdirSync(DATA).some(f => f.startsWith('quizzes.avant-comptes'))) fail('pas de copie de sauvegarde avant migration');
+  if ((await post('/api/auth/login', { email: 'prof@exemple.ch', password: 'faux-faux' })).status !== 400) fail('connexion avec un mauvais mot de passe');
+  if ((await post('/api/auth/login', { email: ' PROF@exemple.ch', password: 'motdepasse1' })).status !== 200) fail('connexion admin (e-mail en majuscules)');
+
+  // invitation → nouveau prof
+  const inv = (await post('/api/admin/invites', { note: 'Julie' }, ADM)).data;
+  if (!/^[A-Z2-9]{8}$/.test(inv.code || '')) fail('code d\'invitation : ' + JSON.stringify(inv));
+  const profBody = { code: inv.code.toLowerCase().replace(/(.{4})/, '$1-'), name: 'Julie', email: 'julie@exemple.ch', password: 'julie12345' };
+  const reg = await post('/api/auth/register', profBody);
+  if (reg.status !== 200 || reg.data.user.role !== 'prof') fail('inscription : ' + JSON.stringify(reg.data));
+  if ((await post('/api/auth/register', { ...profBody, email: 'autre@exemple.ch' })).status !== 400) fail('code d\'invitation réutilisé');
+  if ((await post('/api/auth/register', { ...profBody, code: 'ZZZZZZZZ', email: 'z@z.ch' })).status !== 400) fail('inscription sans code valable');
+  let JUL = reg.data.token;
+  const julQuiz = (await get('/api/quizzes', JUL)).data;
+  if (julQuiz.length !== 1 || julQuiz[0].id === 'ancien') fail('Julie devrait avoir seulement le quiz de démo');
+  if ((await get('/api/quizzes/ancien', JUL)).status !== 404) fail('Julie voit un quiz de l\'admin');
+  if ((await get('/api/admin/users', JUL)).status !== 403) fail('Julie accède à l\'administration');
+  const steal = await emit(io(URL), 'host:create', { token: JUL, quizId: 'ancien', mode: 'arena' });
+  if (!steal.error) fail('Julie lance une partie avec le quiz de l\'admin');
+
+  // mot de passe provisoire
+  const users = (await get('/api/admin/users', ADM)).data.users;
+  const julId = users.find(u => u.email === 'julie@exemple.ch').id;
+  const temp = (await post(`/api/admin/users/${julId}/reset`, {}, ADM)).data.password;
+  if ((await get('/api/quizzes', JUL)).status !== 401) fail('ancienne session encore valable après réinitialisation');
+  const tlog = await post('/api/auth/login', { email: 'julie@exemple.ch', password: temp });
+  if (!tlog.data.user || !tlog.data.user.mustChange) fail('mot de passe provisoire : changement non exigé');
+  JUL = tlog.data.token;
+  if ((await get('/api/quizzes', JUL)).status !== 403) fail('quiz accessibles avant de changer le mot de passe provisoire');
+  const chg = await post('/api/auth/password', { newPassword: 'nouveau-mdp' }, JUL);
+  if (chg.status !== 200 || chg.data.user.mustChange) fail('changement de mot de passe : ' + JSON.stringify(chg.data));
+  if ((await get('/api/quizzes', chg.data.token)).status !== 200) fail('quiz inaccessibles après changement');
+  // désactivation
+  await post(`/api/admin/users/${julId}/disabled`, { disabled: true }, ADM);
+  if ((await get('/api/quizzes', chg.data.token)).status !== 401) fail('compte désactivé encore connecté');
+  if ((await post('/api/auth/login', { email: 'julie@exemple.ch', password: 'nouveau-mdp' })).status !== 400) fail('connexion d\'un compte désactivé');
+  console.log('OK — comptes (mise en route, invitations, séparation des quiz, mots de passe, désactivation)');
+
   // API
-  const h = { 'Content-Type': 'application/json', 'x-admin-password': PW };
-  const bad = await fetch(URL + '/api/quizzes', { headers: { 'x-admin-password': 'nope' } });
-  if (bad.status !== 401) fail('API accessible sans mot de passe');
+  const h = { ...J, Authorization: 'Bearer ' + ADM };
+  const bad = await fetch(URL + '/api/quizzes', { headers: { Authorization: 'Bearer nope' } });
+  if (bad.status !== 401) fail('API accessible sans connexion');
   const created = await (await fetch(URL + '/api/quizzes', {
     method: 'POST', headers: h,
     body: JSON.stringify({ title: 'Test', questions: [
@@ -43,12 +106,12 @@ async function main() {
 
   const modesList = await (await fetch(URL + '/api/modes', { headers: h })).json();
   if (!Array.isArray(modesList) || !modesList.find(m => m.id === 'arena')) fail('/api/modes ne liste pas l\'arène');
-  const badMode = await emit(io(URL), 'host:create', { password: PW, quizId: created.id, mode: 'inexistant' });
+  const badMode = await emit(io(URL), 'host:create', { token: ADM, quizId: created.id, mode: 'inexistant' });
   if (!badMode.error) fail('mode inconnu accepté');
 
   // prof
   const host = io(URL);
-  const hostRes = await emit(host, 'host:create', { password: PW, quizId: created.id, mode: 'arena', settings: { duration: 3, frequency: 'high', showAnswer: 'on' } });
+  const hostRes = await emit(host, 'host:create', { token: ADM, quizId: created.id, mode: 'arena', settings: { duration: 3, frequency: 'high', showAnswer: 'on' } });
   if (!hostRes.ok) fail('host:create ' + JSON.stringify(hostRes));
   const code = hostRes.code;
   let report = null, hostStats = 0, states = 0;

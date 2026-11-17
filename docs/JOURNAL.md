@@ -5,6 +5,38 @@ Les plus récentes en haut.
 
 ---
 
+## Session 10 — 17 novembre 2026 · Comptes profs (multi-tenant)
+
+**Décisions** (choix de Tirtho)
+- **Inscription sur invitation** : un administrateur crée des codes à usage unique (14 jours) et les donne aux
+  collègues. Pas d'inscription ouverte (évite inconnus et robots).
+- **Mot de passe oublié** : l'administrateur génère un mot de passe provisoire, à changer à la connexion.
+  Pas de serveur e-mail à configurer.
+- **Pas de partage de quiz** entre profs pour l'instant (l'export / import Excel suffit).
+- Migration sans risque pour les quiz de Tirtho : le premier compte (administrateur) se crée avec l'ancien mot
+  de passe prof comme code de mise en route ; les quiz existants lui sont rattachés après une copie de
+  sauvegarde. Rien n'est supprimé dans `data/`.
+- Connexion par jeton signé (HMAC, clé dans `data/secret.key`) plutôt que des sessions en mémoire : les profs
+  restent connectés après un redémarrage du serveur (mise à jour). Un compteur par compte invalide les anciens
+  jetons (changement de mot de passe, réinitialisation, désactivation).
+- Mots de passe hachés avec scrypt (inclus dans Node, aucune dépendance ajoutée).
+
+**Réalisé**
+- `lib/accounts.js` (comptes, invitations, jetons, réinitialisation, désactivation, rôles) ; `lib/quizzes.js`
+  (propriétaire par quiz, migration, quiz de démo par compte) ; `server.js` (routes `/api/auth/*`,
+  `/api/admin/*`, quiz filtrés par prof, parties liées au prof qui les lance, frein anti-essais).
+- Page prof : connexion par e-mail, « Créer mon compte » avec code, premier compte, changement de mot de passe
+  (obligatoire après un provisoire), barre de compte, page « Comptes et invitations ».
+- Tests : `npm test` vérifie la mise en route, la migration, les invitations (réutilisation refusée), la
+  séparation des quiz et des parties, le mot de passe provisoire et la désactivation. Parcours vérifié dans
+  Chrome (admin + collègue dans deux navigateurs). v0.10.0.
+
+**Reste ouvert**
+- À la mise en ligne : Tirtho crée son compte administrateur avec l'ancien mot de passe prof.
+- Plus tard peut-être : partage de quiz, e-mail pour le mot de passe oublié, suppression de compte.
+
+---
+
 ## Session 9 — 12 novembre 2026 · Vraie direction médiévale + correctif du FPS en ligne
 
 **Décisions**

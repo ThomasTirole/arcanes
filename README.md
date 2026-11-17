@@ -7,7 +7,8 @@ ajoutés sans toucher aux quiz ni au reste (voir « Ajouter un jeu »).
 
 - **En ligne** : https://quiz.tirtho.ch (élèves) — https://quiz.tirtho.ch/prof (prof)
 - **Élèves** : code + pseudo, sur PC (clavier)
-- **Prof** : mot de passe, éditeur de quiz, import Excel, lancement, vue spectateur, résultats détaillés
+- **Profs** : chacun son compte (sur invitation) et ses quiz ; éditeur, import Excel, lancement, vue spectateur,
+  résultats détaillés
 
 Suivi du projet : [journal de travail](docs/JOURNAL.md) · [roadmap et idées](docs/ROADMAP.md)
 
@@ -20,8 +21,27 @@ ADMIN_PASSWORD=monmotdepasse npm start      # Windows PowerShell : $env:ADMIN_PA
 
 Puis ouvrir http://localhost:3000/prof. Sur le réseau de l'école, les élèves vont sur `http://<IP-de-ton-PC>:3000`.
 
-`npm test` lance les tests unitaires (correction des questions, import Excel) puis une partie simulée
-(1 prof + 4 robots).
+## Comptes profs
+
+Chaque prof a **son compte et ses propres quiz** ; il ne voit ni les quiz ni les parties des autres.
+
+- **Premier compte** (administrateur) : à la première visite de `/prof`, le formulaire « Premier compte »
+  demande le **code de mise en route** = la valeur de `ADMIN_PASSWORD` (l'ancien mot de passe prof). Les quiz
+  déjà enregistrés sont rattachés à ce compte, après une copie de sauvegarde
+  (`data/quizzes.avant-comptes.<date>.json`).
+- **Inviter un collègue** : page « Comptes et invitations » (administrateurs) → « Créer un code ». Le code
+  (8 caractères, sans 0/O ni 1/I/L) ne sert qu'une fois et vaut 14 jours. Le collègue clique sur « Créer mon
+  compte » et choisit son mot de passe. Chaque nouveau compte reçoit le quiz de démonstration.
+- **Mot de passe oublié** : un administrateur crée un **mot de passe provisoire** (affiché une seule fois) ;
+  le prof doit en choisir un nouveau à sa connexion. Pas d'e-mail.
+- Un administrateur peut aussi **désactiver** un compte (ses quiz sont gardés) ou nommer un autre administrateur.
+- Connexion gardée 30 jours dans le navigateur. Changer de mot de passe, être réinitialisé ou désactivé
+  déconnecte les autres appareils. Frein : 10 essais ratés par 10 minutes et par adresse IP.
+- Fichiers : `data/accounts.json` (comptes, mots de passe hachés avec scrypt, invitations) et
+  `data/secret.key` (clé qui signe les connexions, créée automatiquement — ne pas la partager).
+
+`npm test` lance les tests unitaires (correction des questions, import Excel) puis les comptes (mise en route,
+invitations, séparation des quiz, mots de passe) et une partie simulée (1 prof + 4 robots).
 
 ## Mise en ligne (Infomaniak)
 
@@ -39,8 +59,8 @@ Réglages du site dans le Manager (onglet Node.js) :
 
   `git reset --hard` remplace uniquement les fichiers du projet : `data/` (les quiz) et `node_modules/` ne
   sont pas suivis par Git et restent intacts.
-- **Commande de lancement** : `ADMIN_PASSWORD=… node server.js` (sans `ADMIN_PASSWORD`, le mot de passe prof
-  est `arcanes`).
+- **Commande de lancement** : `ADMIN_PASSWORD=… node server.js`. `ADMIN_PASSWORD` ne sert plus qu'à créer le
+  premier compte administrateur (sans lui, le code de mise en route est `arcanes`).
 
 `/api/status` indique la version en ligne, l'heure de démarrage (UTC) et le nombre de parties en cours.
 
@@ -186,7 +206,8 @@ Tous les chiffres de déplacement sont en haut de `modes/fps/public/game.js` (ob
 Trois couches indépendantes :
 
 ```
-lib/quizzes.js        1. LES QUIZ — stockage (data/quizzes.json), utilisables par tous les jeux
+lib/accounts.js       0. LES COMPTES — profs, invitations, connexion (data/accounts.json)
+lib/quizzes.js        1. LES QUIZ — stockage (data/quizzes.json), un propriétaire par quiz, utilisables par tous les jeux
 lib/session.js        2. LE MOTEUR COMMUN — salle d'attente, joueurs, reconnexion, questions
                          (tirage sans répétition, mélange, correction, minuteur), statistiques,
                          résultats, podium, rapport par question
