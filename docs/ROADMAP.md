@@ -9,6 +9,14 @@ Légende : **[fait]** réalisé (avec le numéro de session) · **[idée]** à c
 
 ## Prochaines étapes
 
+- [ ] **Overhaul graphique (demande de Tirtho, 17 nov.)** : ça fait encore « jeu cheap », surtout le **HUD** et la
+      **fenêtre de questions**. Objectif : un rendu digne d'un **jeu à gros budget** — animations soignées,
+      propre mais sobre, détaillé mais simple, qui **ne fasse pas « IA »** et reste dans le thème médiéval.
+      Pistes : vrais éléments d'interface dessinés (cadres, parchemins, métal, bois), transitions et micro-
+      animations (apparition des questions, révélation de la bonne réponse, gain de munitions qui « vole » vers
+      le HUD), typographie et hiérarchie revues, HUD repensé (énergie, armes, minuteur, classement), cohérence
+      Arène / FPS / pages prof. À préparer avec des références (captures de jeux aimés) et des maquettes
+      validées avant de coder
 - [ ] **To-do du 15 nov. (Tirtho)** — détaillé dans les rubriques ci-dessous :
       page de présentation, comptes profs (multi-tenant), dégel en martelant une touche, DA commune Arène / FPS,
       questions plus sobres, récap de quiz en diaporama
