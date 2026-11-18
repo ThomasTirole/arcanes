@@ -5,6 +5,25 @@ Les plus récentes en haut.
 
 ---
 
+## Session 12 — 18 novembre 2026 · Passation vers un autre compte Claude
+
+**Décisions**
+- Tirtho change de compte Claude (nouvelle adresse pro) : tout ce qu'il faut pour reprendre est **dans le
+  dépôt**, pas seulement dans la conversation. Nouveau `docs/PASSATION.md` (contexte, mise en ligne, façon de
+  travailler avec Tirtho, architecture, état, problèmes connus, suite, outils de test) avec un message prêt à
+  coller dans la nouvelle conversation.
+- Le script de reconstruction des assets du FPS est versionné (`scripts/assets/build-fps-assets.mjs`) : les
+  packs d'origine restent chez Tirtho.
+- `CLAUDE.md` corrigé : il disait encore que chaque push déployait en production (faux depuis la session 4).
+
+**Réalisé**
+- `docs/PASSATION.md`, `scripts/assets/build-fps-assets.mjs`, `CLAUDE.md` et `README.md` mis à jour.
+
+**Reste ouvert**
+- Côté Tirtho : donner à la nouvelle session l'accès au dépôt GitHub pour pouvoir pousser.
+
+---
+
 ## Session 11 — 17 novembre 2026 · Retours de classe : FPS, Brave, anti-hasard
 
 **Décisions**

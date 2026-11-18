@@ -10,7 +10,7 @@ ajoutés sans toucher aux quiz ni au reste (voir « Ajouter un jeu »).
 - **Profs** : chacun son compte (sur invitation) et ses quiz ; éditeur, import Excel, lancement, vue spectateur,
   résultats détaillés
 
-Suivi du projet : [journal de travail](docs/JOURNAL.md) · [roadmap et idées](docs/ROADMAP.md)
+Suivi du projet : [journal de travail](docs/JOURNAL.md) · [roadmap et idées](docs/ROADMAP.md) · [passation (reprendre le projet)](docs/PASSATION.md)
 
 ## Lancer en local
 
@@ -237,7 +237,8 @@ public/               pages communes : élève (index.html), prof (prof.html), f
 test/                 unit.js (correction, import) et simulation.js (partie complète) — npm test
 docs/                 JOURNAL.md (journal de travail), ROADMAP.md (idées et prochaines étapes)
 .github/workflows/    deploy.yml (déploiement SSH, lancement manuel seulement — la mise à jour passe par « Build »)
-scripts/              remote-deploy.sh (lancé sur le serveur après l'envoi : npm install si besoin + .restart)
+scripts/              remote-deploy.sh (ancien déploiement SSH, inutilisé) ; assets/build-fps-assets.mjs
+                      (reconstruit les modèles / textures du FPS depuis les packs Quaternius)
 ```
 
 ## Ajouter un jeu

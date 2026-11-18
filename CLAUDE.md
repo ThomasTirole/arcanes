@@ -1,7 +1,8 @@
 # Instructions pour Claude — projet Arcanes
 
-Projet de Tirtho (enseignant en école professionnelle, DIVTEC) : jeux de révision multijoueurs pour la
-classe. Langue du projet, du code commenté et des échanges : **français**, ton informel.
+Projet de Tirtho (enseignant en école professionnelle, Jura suisse) : jeux de révision multijoueurs pour la
+classe. Langue du projet, du code commenté et des échanges : **français**, ton informel, réponses courtes.
+Pour reprendre le projet depuis un autre compte ou une nouvelle session : lire d'abord `docs/PASSATION.md`.
 
 ## Suivi du projet (obligatoire à chaque session)
 
@@ -18,13 +19,15 @@ classe. Langue du projet, du code commenté et des échanges : **français**, to
 
 ## Architecture (voir README)
 
-- `lib/quizzes.js` (stockage des quiz), `lib/session.js` (moteur commun), `modes/<id>/` (un jeu par dossier).
+- `lib/accounts.js` (comptes profs), `lib/quizzes.js` (stockage des quiz), `lib/session.js` (moteur commun),
+  `modes/<id>/` (un jeu par dossier, fichier navigateur `public/jeu.js`).
 - Un nouveau jeu = copie de `modes/_modele`. Ne pas mettre de logique propre à un jeu dans `lib/` ou `public/`.
 - Serveur maître des dégâts / scores ; le navigateur simule seulement son propre déplacement.
 
 ## Avant de pousser sur `main`
 
 - `npm test` doit passer (tests unitaires + partie simulée).
-- Chaque push sur `main` **déploie en production** (quiz.tirtho.ch) via GitHub Actions : ne pousser que du
-  code testé. Le serveur ne redémarre qu'en dehors des parties en cours.
+- Un push sur `main` ne déploie **pas** tout seul : Tirtho met en ligne avec **Build** puis **Run** dans le Manager
+  Infomaniak (le build récupère `main` sur GitHub). Ne pousser que du code testé, et lui rappeler de ne pas
+  faire Build/Run pendant une partie.
 - Ne jamais envoyer ni écraser `data/` (les quiz de Tirtho).
